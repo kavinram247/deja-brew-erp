@@ -1,0 +1,94 @@
+{
+  "theme": "Light",
+  "archetype": "Organic & Earthy",
+  "mood": "Warm, tactile, inviting, and highly functional. It should feel like stepping into a well-lit, premium coffee shop: grounded, rich in texture, without overwhelming visual noise.",
+  "colors": {
+    "background": {
+      "default": "#FDFBF7",
+      "surface": "#F6F3EC"
+    },
+    "text": {
+      "primary": "#2C241B",
+      "secondary": "#5C4F43",
+      "tertiary": "#8A7D71"
+    },
+    "brand": {
+      "primary": "#8B5A2B",
+      "primary_hover": "#704822",
+      "accent": "#C06C4C"
+    },
+    "states": {
+      "success": "#3E5C46",
+      "warning": "#D48B3D",
+      "danger": "#B84B4B"
+    },
+    "borders": {
+      "default": "rgba(44, 36, 27, 0.08)",
+      "focus": "#8B5A2B"
+    }
+  },
+  "typography": {
+    "headings": {
+      "family": "Outfit, sans-serif",
+      "weights": ["400", "600"],
+      "tracking": "tracking-tight"
+    },
+    "body": {
+      "family": "Figtree, sans-serif",
+      "weights": ["400", "500"]
+    },
+    "sizes": {
+      "h1": "text-4xl md:text-5xl",
+      "h2": "text-2xl md:text-3xl",
+      "h3": "text-xl",
+      "h4": "text-lg",
+      "body": "text-base",
+      "small": "text-sm",
+      "overline": "text-xs uppercase tracking-[0.2em]"
+    }
+  },
+  "layout_and_spacing": {
+    "grid_strategy": "Control Room Grid (Dashboard Mode). Base grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 or 12-column bento grids for main dashboard views. Tight gap spacing gap-4 or gap-6.",
+    "spacing_scale": "Use generous internal padding for containers (p-6, p-8) and generous gaps between sections.",
+    "alignment": "Optical alignment over geometrical. Left-align dense content and tables. Headings left-aligned."
+  },
+  "surface_strategy": {
+    "cards": "Clay & Crisp Neumorphism. Background matches surface (#F6F3EC) or pure white (#FFFFFF). 1px solid stroke (border-border or border-amber-900/10) plus a subtle shadow shadow-[0_4px_24px_rgba(44,36,27,0.04)].",
+    "header": "Solid Background with a hard bottom border, or Glassmorphism if floating (bg-[#FDFBF7]/80 backdrop-blur-xl border-b border-amber-900/10)."
+  },
+  "motion": {
+    "hover_states": "Crisp transitions. hover:-translate-y-0.5 and subtle shadow elevation. Explicit text color changes on hover.",
+    "interactions": "Micro-interactions for POS buttons (scale down slightly on active state)."
+  },
+  "components_instructions": {
+    "buttons": "Primary buttons: bg-[#8B5A2B] text-white rounded-lg px-6 py-2.5 font-medium. Ghost/Secondary buttons: text-[#2C241B] hover:bg-[#8B5A2B]/10.",
+    "inputs": "Shadcn based. Custom styling: bg-white border border-amber-900/20 focus:ring-2 focus:ring-[#8B5A2B]/20 focus:border-[#8B5A2B] rounded-lg.",
+    "tables": "Shadcn based. Header text uppercase, small, tracked out (text-xs text-[#8A7D71] tracking-wider). Row hover states: bg-[#8B5A2B]/5.",
+    "charts": "Recharts or Shadcn Charts. Use primary (#8B5A2B) and success (#3E5C46) colors for data lines/bars. No grid lines except subtle horizontal axes."
+  },
+  "media": {
+    "image_urls": {
+      "login_background": {
+        "url": "https://images.unsplash.com/photo-1544457070-4cd773b4d71e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBjYWZlJTIwaW50ZXJpb3IlMjBhZXN0aGV0aWN8ZW58MHx8fHwxNzc2NzEzMDUyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Warm, earthy modern cafe interior. Use for auth/login screen background with a bg-[#2C241B]/40 overlay for text contrast."
+      },
+      "dashboard_hero_accent": {
+        "url": "https://images.unsplash.com/photo-1693682085177-1bc7790cbfdf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxjYWZlJTIwY29mZmVlJTIwcG91cmluZyUyMGFlc3RoZXRpY3xlbnwwfHx8fDE3NzY3MTMwNTJ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Coffee pouring aesthetic. Can be used in onboarding, settings page headers, or empty states as an aesthetic image."
+      }
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure all text against earthy backgrounds meets minimum 4.5:1 ratio. The primary brand color (#8B5A2B) over white is accessible. Avoid placing white text over light terracotta without a darker overlay.",
+    "testing_attributes": "All interactive elements must include data-testid attributes (kebab-case, role-based, e.g., data-testid='submit-billing-btn')."
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. No default tailwind grays (slate/gray). Use the provided warm earth tones for UI structure.",
+    "Do not use Inter for headings. Use 'Outfit' for headings and 'Figtree' for body text (import via Google Fonts).",
+    "Apply 'Clay & Crisp' surface rules to all Shadcn cards: border-amber-900/10, bg-white or bg-[#F6F3EC], subtle shadows.",
+    "For the POS/Billing screen, prioritize an efficient bento grid layout with maximum usability for fast data entry (dense but legible).",
+    "Use Phosphor Icons (yarn add @phosphor-icons/react) for a premium, clean look that fits the cafe theme.",
+    "Ensure the float amount (INR 5200) and revenue logic are prominently visible in the Owner dashboard, using Moss Green (#3E5C46) for positive balances.",
+    "Every interactive element must have a data-testid for testing."
+  ]
+}
