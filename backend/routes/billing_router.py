@@ -8,22 +8,72 @@ from auth_utils import get_current_user
 
 router = APIRouter()
 
+TAX_RATE = 0.025  # 2.5% CGST + 2.5% SGST
 
-class BillItem(BaseModel):
+
+class BillItemCreate(BaseModel):
     menu_item_id: str
     name: str
     price: float
     quantity: int
-    subtotal: float
+    item_discount_pct: float = 0.0
 
 
 class BillCreate(BaseModel):
     customer_name: str
     customer_phone: Optional[str] = None
-    items: List[BillItem]
+    items: List[BillItemCreate]
+    overall_discount: float = 0.0
     payment_mode: str
     cash_amount: float = 0.0
     upi_amount: float = 0.0
+
+
+def calc_item(item: BillItemCreate) -> dict:
+    gross = round(item.price * item.quantity, 2)
+    disc = round(gross * item.item_discount_pct / 100, 2)
+    return {
+        "menu_item_id": item.menu_item_id, "name": item.name,
+        "price": item.price, "quantity": item.quantity,
+        "item_discount_pct": item.item_discount_pct,
+        "gross": gross, "item_discount": disc,
+        "subtotal": round(gross - disc, 2),
+    }
+
+
+async def deduct_inventory(db, items: list, bill_id: str) -> list:
+    deductions = []
+    for item in items:
+        recipe = await db.recipes.find_one({"menu_item_id": item["menu_item_id"]})
+        if not recipe:
+            continue
+        for ing in recipe.get("ingredients", []):
+            qty = round(ing["quantity"] * item["quantity"], 6)
+            try:
+                await db.inventory.update_one(
+                    {"_id": ObjectId(ing["inventory_item_id"])},
+                    {"$inc": {"current_stock": -qty}},
+                )
+                deductions.append({
+                    "inventory_item_id": ing["inventory_item_id"],
+                    "item_name": ing["item_name"],
+                    "quantity_deducted": qty,
+                    "unit": ing.get("unit", ""),
+                })
+            except Exception:
+                pass
+    return deductions
+
+
+async def restore_inventory(db, deductions: list):
+    for d in deductions:
+        try:
+            await db.inventory.update_one(
+                {"_id": ObjectId(d["inventory_item_id"])},
+                {"$inc": {"current_stock": d["quantity_deducted"]}},
+            )
+        except Exception:
+            pass
 
 
 def serialize(doc):
@@ -48,18 +98,19 @@ async def create_bill(input: BillCreate, request: Request):
     user = await get_current_user(request, db)
     now = datetime.now(timezone.utc)
 
-    subtotal = sum(item.subtotal for item in input.items)
-    total = subtotal
+    calc_items = [calc_item(i) for i in input.items]
+    subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
+    taxable = round(max(0, subtotal - input.overall_discount), 2)
+    cgst = round(taxable * TAX_RATE, 2)
+    sgst = round(taxable * TAX_RATE, 2)
+    total = round(taxable + cgst + sgst, 2)
 
     if input.payment_mode == "cash":
-        cash_amount = total
-        upi_amount = 0.0
+        cash, upi = total, 0.0
     elif input.payment_mode == "upi":
-        cash_amount = 0.0
-        upi_amount = total
+        cash, upi = 0.0, total
     else:
-        cash_amount = input.cash_amount
-        upi_amount = input.upi_amount
+        cash, upi = input.cash_amount, input.upi_amount
 
     today_str = now.strftime("%Y-%m-%d")
     count = await db.bills.count_documents({"date": today_str})
@@ -69,34 +120,50 @@ async def create_bill(input: BillCreate, request: Request):
         "bill_number": bill_number,
         "customer_name": input.customer_name,
         "customer_phone": input.customer_phone,
-        "items": [item.model_dump() for item in input.items],
+        "items": calc_items,
         "subtotal": subtotal,
-        "total": total,
+        "overall_discount": input.overall_discount,
+        "taxable_amount": taxable,
+        "cgst": cgst, "sgst": sgst, "total": total,
         "payment_mode": input.payment_mode,
-        "cash_amount": cash_amount,
-        "upi_amount": upi_amount,
+        "cash_amount": cash, "upi_amount": upi,
         "date": today_str,
         "created_at": now.isoformat(),
-        "created_by": user.get("id") or user.get("_id"),
+        "created_by": user.get("id"),
+        "is_voided": False,
+        "inventory_deductions": [],
     }
     result = await db.bills.insert_one(doc)
+    deductions = await deduct_inventory(db, calc_items, str(result.inserted_id))
+    if deductions:
+        await db.bills.update_one(
+            {"_id": result.inserted_id},
+            {"$set": {"inventory_deductions": deductions}},
+        )
     doc["_id"] = result.inserted_id
+    doc["inventory_deductions"] = deductions
     return serialize(doc)
 
 
-@router.get("/stats")
-async def get_stats(request: Request, date_str: Optional[str] = None):
+@router.post("/{bill_id}/void")
+async def void_bill(bill_id: str, request: Request):
     db = get_db()
-    await get_current_user(request, db)
-    today = date_str or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    bills = await db.bills.find({"date": today}).to_list(1000)
-    return {
-        "total_bills": len(bills),
-        "total_revenue": sum(b.get("total", 0) for b in bills),
-        "cash_revenue": sum(b.get("cash_amount", 0) for b in bills),
-        "upi_revenue": sum(b.get("upi_amount", 0) for b in bills),
-        "date": today,
-    }
+    user = await get_current_user(request, db)
+    if user.get("role") != "owner":
+        raise HTTPException(403, "Owner access required")
+    bill = await db.bills.find_one({"_id": ObjectId(bill_id)})
+    if not bill:
+        raise HTTPException(404, "Bill not found")
+    if bill.get("is_voided"):
+        raise HTTPException(400, "Bill already voided")
+    await restore_inventory(db, bill.get("inventory_deductions", []))
+    now = datetime.now(timezone.utc)
+    await db.bills.update_one(
+        {"_id": ObjectId(bill_id)},
+        {"$set": {"is_voided": True, "voided_at": now.isoformat(), "voided_by": user.get("id")}},
+    )
+    updated = await db.bills.find_one({"_id": ObjectId(bill_id)})
+    return serialize(updated)
 
 
 @router.get("/{bill_id}")

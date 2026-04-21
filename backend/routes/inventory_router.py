@@ -12,14 +12,15 @@ router = APIRouter()
 class InventoryItemCreate(BaseModel):
     name: str
     category: str
-    quantity: float
+    section: str = "Other"   # Barista / Kitchen / Other
+    current_stock: float
     unit: str
     min_quantity: float
     cost_per_unit: float
 
 
-class InventoryAdjust(BaseModel):
-    quantity: float
+class StockAdjust(BaseModel):
+    adjustment: float    # positive = add, negative = reduce
     notes: Optional[str] = None
 
 
@@ -31,19 +32,18 @@ def serialize(doc):
 
 
 @router.get("")
-async def get_inventory(request: Request):
+async def get_inventory(request: Request, section: Optional[str] = None):
     db = get_db()
     await get_current_user(request, db)
-    items = await db.inventory.find({}).sort([("category", 1), ("name", 1)]).to_list(1000)
+    query = {"section": section} if section and section != "All" else {}
+    items = await db.inventory.find(query).sort([("section", 1), ("name", 1)]).to_list(1000)
     return [serialize(i) for i in items]
 
 
 @router.post("")
 async def create_item(input: InventoryItemCreate, request: Request):
     db = get_db()
-    user = await get_current_user(request, db)
-    if user.get("role") != "owner":
-        raise HTTPException(403, "Owner access required")
+    await get_current_user(request, db)
     doc = input.model_dump()
     doc["last_updated"] = datetime.now(timezone.utc).isoformat()
     result = await db.inventory.insert_one(doc)
@@ -54,9 +54,7 @@ async def create_item(input: InventoryItemCreate, request: Request):
 @router.put("/{item_id}")
 async def update_item(item_id: str, input: InventoryItemCreate, request: Request):
     db = get_db()
-    user = await get_current_user(request, db)
-    if user.get("role") != "owner":
-        raise HTTPException(403, "Owner access required")
+    await get_current_user(request, db)
     update = input.model_dump()
     update["last_updated"] = datetime.now(timezone.utc).isoformat()
     await db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": update})
@@ -67,21 +65,33 @@ async def update_item(item_id: str, input: InventoryItemCreate, request: Request
 @router.delete("/{item_id}")
 async def delete_item(item_id: str, request: Request):
     db = get_db()
-    user = await get_current_user(request, db)
-    if user.get("role") != "owner":
-        raise HTTPException(403, "Owner access required")
+    await get_current_user(request, db)
     await db.inventory.delete_one({"_id": ObjectId(item_id)})
     return {"message": "Deleted"}
 
 
 @router.post("/{item_id}/adjust")
-async def adjust_quantity(item_id: str, input: InventoryAdjust, request: Request):
+async def adjust_stock(item_id: str, input: StockAdjust, request: Request):
     db = get_db()
     await get_current_user(request, db)
-    update = {
-        "quantity": input.quantity,
-        "last_updated": datetime.now(timezone.utc).isoformat(),
-    }
-    await db.inventory.update_one({"_id": ObjectId(item_id)}, {"$set": update})
+    await db.inventory.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$inc": {"current_stock": input.adjustment},
+         "$set": {"last_updated": datetime.now(timezone.utc).isoformat()}},
+    )
+    item = await db.inventory.find_one({"_id": ObjectId(item_id)})
+    return serialize(item)
+
+
+@router.post("/{item_id}/set-stock")
+async def set_stock(item_id: str, input: StockAdjust, request: Request):
+    """Set stock to exact value (positive adjustment = new stock value)"""
+    db = get_db()
+    await get_current_user(request, db)
+    await db.inventory.update_one(
+        {"_id": ObjectId(item_id)},
+        {"$set": {"current_stock": input.adjustment,
+                  "last_updated": datetime.now(timezone.utc).isoformat()}},
+    )
     item = await db.inventory.find_one({"_id": ObjectId(item_id)})
     return serialize(item)
