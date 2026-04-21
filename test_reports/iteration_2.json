@@ -1,0 +1,45 @@
+{
+  "summary": "V2 architecture pivot E2E testing: 35/35 backend pytest passed (100%). Frontend Playwright: role-based redirect, RBAC, all entry+dashboard pages load, unauth redirect — all pass. Recipe-driven inventory deduction, bill void restore, routine execution deduction, 2.5% CGST+SGST math, cash/upi/split payments all validated via API. Created test employee user (employee@dejabrew.com).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Entry /walkins", "issues": ["Uses native browser <input type='date'> instead of shadcn Calendar/Popover date picker (minor UX inconsistency with coffee-themed UI)"]},
+      {"screen": "DateRangeToolbar on Overview", "issues": ["Toolbar renders (Today/7 Days/This Month/Custom) but has no data-testid='date-range-toolbar' attribute on the container; tabs are clickable but hard to target in tests"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_deja_brew_v2.py",
+    "/app/test_reports/pytest/v2_results.xml"
+  ],
+  "action_items": [
+    "(Minor) Add data-testid='date-range-toolbar' to DateRangeToolbar container and individual tabs (today/7days/month/custom) for testability.",
+    "(Minor) Consider replacing native HTML date input on WalkIns page with shadcn DatePicker for consistent coffee-warmed theme."
+  ],
+  "critical_code_review_comments": [
+    "billing_router.deduct_inventory: inventory update uses ObjectId(ing.inventory_item_id) inside try/except that silently swallows errors — OK for MVP but should at least log failures; otherwise a bad recipe mapping will silently fail to deduct.",
+    "float_router seeds FLOAT_OPENING=5200 via get_or_create only on first read — behavior is per UTC calendar day; if ops run past midnight UTC (≈05:30 IST) a fresh float will auto-create which may be surprising (acceptable for now, documented).",
+    "auth cookies set with secure=False — intentional for non-HTTPS local, but production deploy behind HTTPS should flip secure=True.",
+    "No rate limiting / brute-force lockout on /api/auth/login. Requirement mentioned 5-fail lockout but not implemented. Not blocking MVP but flagged.",
+    "auth/register allows owner to register any role including 'owner' — no role whitelist validation (could create multiple owners silently). Low risk.",
+    "bill creation does not validate cash+upi ≈ total when payment_mode='split'; backend accepts any split amounts. FE should guard; BE currently trusts input."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_deja_brew_v2.py (new - 35 tests)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": {
+    "owner": "owner@dejabrew.com / BrewOwner2024",
+    "employee": "employee@dejabrew.com / Emp12345 (created via POST /api/auth/register during test run)"
+  },
+  "seed_data_creation": "Created employee user (employee@dejabrew.com). Created TEST_-prefixed menu items, inventory items, recipes, walkins, online sales, float expenses, banking entries, routines during test run; not cleaned up (idempotent by UUID suffix).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run tests with: export $(grep REACT_APP_BACKEND_URL /app/frontend/.env) && pytest /app/backend/tests/test_deja_brew_v2.py -v. The env var must be exported from frontend/.env. test_deja_brew.py (old) has stale payloads — test_deja_brew_v2.py is authoritative. Employee user persists across runs.",
+  "rca_of_the_issue": "No critical bugs found. Initial pytest failures were due to REACT_APP_BACKEND_URL not being in the test shell environment; exporting from frontend/.env resolves it."
+}
