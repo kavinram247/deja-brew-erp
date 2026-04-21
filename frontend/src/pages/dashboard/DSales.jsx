@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
 import DateRangeToolbar from "../../components/DateRangeToolbar";
+import { downloadCsv } from "../../utils/csv";
 
 export default function DSales() {
   const today = new Date().toISOString().split("T")[0];
@@ -41,6 +43,21 @@ export default function DSales() {
 
   const avgBillValue = totals.bills > 0 ? (totals.offline / totals.bills).toFixed(0) : 0;
 
+  const exportCsv = () => {
+    if (rows.length === 0) { toast.error("No data to export"); return; }
+    downloadCsv(`dejabrew-sales-${range.from}_to_${range.to}.csv`, rows, [
+      { key: "date", label: "Date" },
+      { key: "offline_revenue", label: "Offline Revenue" },
+      { key: "online_revenue", label: "Online Revenue" },
+      { key: "total_revenue", label: "Total Revenue" },
+      { key: "bills", label: "Bills" },
+      { key: "cash", label: "Cash" },
+      { key: "upi", label: "UPI" },
+      { key: "platforms", label: "Platform Breakdown", format: (v) => v ? Object.entries(v).map(([k, val]) => `${k}:${val}`).join("|") : "" },
+    ]);
+    toast.success(`Exported ${rows.length} day(s)`);
+  };
+
   return (
     <div style={{ fontFamily: "Figtree, sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -48,7 +65,14 @@ export default function DSales() {
           <h1 className="text-3xl font-bold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Sales Analytics</h1>
           <p className="text-[#8A7D71] text-sm mt-1">Offline + Online performance</p>
         </div>
-        <DateRangeToolbar {...range} onChange={setRange} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangeToolbar {...range} onChange={setRange} />
+          <button onClick={exportCsv}
+            className="flex items-center gap-2 bg-[#3E5C46] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#2F4735]"
+            data-testid="export-sales-csv">
+            <Download size={14} /> CSV
+          </button>
+        </div>
       </div>
 
       {loading ? <div className="text-center text-[#8A7D71] py-20">Loading...</div> : (

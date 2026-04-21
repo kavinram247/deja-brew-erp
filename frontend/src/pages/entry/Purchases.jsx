@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
+import ThemeDatePicker from "../../components/ThemeDatePicker";
 
 const CATEGORIES = ["Raw Materials", "Consumables", "Utilities", "Staff", "Maintenance", "Other"];
 
@@ -63,8 +64,7 @@ export default function Purchases() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => changeDate(-1)} className="p-2 rounded-xl border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10"><ChevronLeft size={16} /></button>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-            className="rounded-xl border border-amber-900/20 px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]" data-testid="purchases-date" />
+          <ThemeDatePicker value={date} onChange={setDate} max={today} testid="purchases-date" />
           <button onClick={() => changeDate(1)} disabled={date >= today} className="p-2 rounded-xl border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10 disabled:opacity-40">
             <ChevronRight size={16} />
           </button>

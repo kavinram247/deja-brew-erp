@@ -1,5 +1,6 @@
 import React from "react";
 import { Calendar } from "lucide-react";
+import ThemeDatePicker from "./ThemeDatePicker";
 
 /**
  * Unified date-range selector used across all /dashboard/* analytics pages.
@@ -55,13 +56,10 @@ export default function DateRangeToolbar({ preset, from, to, onChange }) {
       </div>
 
       {preset === "custom" && (
-        <div className="flex items-center gap-2 bg-white rounded-xl border border-amber-900/10 px-3 py-1.5 shadow-[0_2px_8px_rgba(44,36,27,0.04)]">
-          <Calendar size={14} className="text-[#8B5A2B]" />
-          <input type="date" value={from} onChange={(e) => set("custom", e.target.value, to)}
-            className="text-xs text-[#2C241B] focus:outline-none" data-testid="range-from" />
+        <div className="flex items-center gap-2">
+          <ThemeDatePicker value={from} onChange={(v) => set("custom", v, to)} testid="range-from" />
           <span className="text-xs text-[#8A7D71]">→</span>
-          <input type="date" value={to} onChange={(e) => set("custom", from, e.target.value)}
-            className="text-xs text-[#2C241B] focus:outline-none" data-testid="range-to" />
+          <ThemeDatePicker value={to} onChange={(v) => set("custom", from, v)} testid="range-to" />
         </div>
       )}
     </div>

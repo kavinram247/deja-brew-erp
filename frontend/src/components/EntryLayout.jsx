@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Users2, ShoppingBag, Wallet, Package, Receipt, ClipboardList, UtensilsCrossed, LogOut, Menu, LayoutDashboard } from "lucide-react";
+import { Users2, ShoppingBag, Wallet, Package, Receipt, ClipboardList, UtensilsCrossed, LogOut, Menu, LayoutDashboard, FileText } from "lucide-react";
 import { useState } from "react";
 
 const NAV = [
@@ -9,6 +9,7 @@ const NAV = [
   { to: "/entry/purchases", label: "Purchases",     icon: Wallet },
   { to: "/entry/inventory", label: "Inventory",     icon: Package },
   { to: "/entry/billing",   label: "Billing",       icon: Receipt },
+  { to: "/entry/bills",     label: "Bills",         icon: FileText },
   { to: "/entry/routines",  label: "Routines",      icon: ClipboardList },
   { to: "/entry/menu",      label: "Menu",          icon: UtensilsCrossed },
 ];

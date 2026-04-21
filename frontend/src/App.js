@@ -14,6 +14,7 @@ import OnlineSales    from "./pages/entry/OnlineSales";
 import Purchases      from "./pages/entry/Purchases";
 import EntryInventory from "./pages/entry/Inventory";
 import EntryBilling   from "./pages/entry/Billing";
+import EntryBills     from "./pages/entry/Bills";
 import Routines       from "./pages/entry/Routines";
 import EntryMenu      from "./pages/entry/MenuPage";
 
@@ -67,6 +68,7 @@ function App() {
             <Route path="purchases" element={<Purchases />} />
             <Route path="inventory" element={<EntryInventory />} />
             <Route path="billing"   element={<EntryBilling />} />
+            <Route path="bills"      element={<EntryBills />} />
             <Route path="routines"  element={<Routines />} />
             <Route path="menu"      element={<EntryMenu />} />
           </Route>

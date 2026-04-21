@@ -149,8 +149,6 @@ async def create_bill(input: BillCreate, request: Request):
 async def void_bill(bill_id: str, request: Request):
     db = get_db()
     user = await get_current_user(request, db)
-    if user.get("role") != "owner":
-        raise HTTPException(403, "Owner access required")
     bill = await db.bills.find_one({"_id": ObjectId(bill_id)})
     if not bill:
         raise HTTPException(404, "Bill not found")

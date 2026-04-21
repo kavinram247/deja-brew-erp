@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Users, Receipt, ShoppingBag, TrendingUp, AlertTriangle, Wallet, Coffee } from "lucide-react";
+import { Users, Receipt, ShoppingBag, TrendingUp, AlertTriangle, Wallet, Coffee, Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 import DateRangeToolbar, { computeRange } from "../../components/DateRangeToolbar";
+import { downloadCsv } from "../../utils/csv";
 
 function StatCard({ icon: Icon, label, value, sub, color = "#8B5A2B", testid }) {
   return (
@@ -58,6 +59,23 @@ export default function Overview() {
     : range.preset === "week" ? "Last 7 Days"
     : range.preset === "month" ? "This Month" : `${range.from} → ${range.to}`;
 
+  const exportCsv = () => {
+    if (rows.length === 0) { toast.error("No data to export"); return; }
+    downloadCsv(`dejabrew-overview-${range.from}_to_${range.to}.csv`, rows, [
+      { key: "date", label: "Date" },
+      { key: "offline_revenue", label: "Offline Revenue" },
+      { key: "online_revenue", label: "Online Revenue" },
+      { key: "total_revenue", label: "Total Revenue" },
+      { key: "bills", label: "Bills" },
+      { key: "walkins", label: "Walk-ins" },
+      { key: "guests", label: "Guests" },
+      { key: "cash", label: "Cash" },
+      { key: "upi", label: "UPI" },
+      { key: "platforms", label: "Platforms", format: (v) => v ? Object.entries(v).map(([k, val]) => `${k}:${val}`).join("|") : "" },
+    ]);
+    toast.success(`Exported ${rows.length} day(s)`);
+  };
+
   return (
     <div style={{ fontFamily: "Figtree, sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -66,6 +84,11 @@ export default function Overview() {
           <p className="text-[#8A7D71] text-sm mt-1">{rangeLabel} · business insights</p>
         </div>
         <DateRangeToolbar {...range} onChange={setRange} />
+        <button onClick={exportCsv}
+          className="flex items-center gap-2 bg-[#3E5C46] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#2F4735]"
+          data-testid="export-overview-csv">
+          <Download size={14} /> CSV
+        </button>
       </div>
 
       {loading ? <div className="text-center text-[#8A7D71] py-20"><Coffee className="mx-auto animate-pulse text-[#8B5A2B] mb-2" /> Loading...</div> : (

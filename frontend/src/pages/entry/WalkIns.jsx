@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Users2, RefreshCw } from "lucide-react";
+import ThemeDatePicker from "../../components/ThemeDatePicker";
 
 const PAYMENT_MODES = ["cash", "upi", "split"];
 
@@ -57,9 +58,7 @@ export default function WalkIns() {
           <p className="text-[#8A7D71] text-sm mt-1">Record guest arrivals</p>
         </div>
         <div className="flex items-center gap-2">
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-            className="rounded-xl border border-amber-900/20 px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
-            data-testid="walkin-date-picker" />
+          <ThemeDatePicker value={date} onChange={setDate} testid="walkin-date-picker" />
           <button onClick={load} className="p-2 rounded-xl border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10">
             <RefreshCw size={16} />
           </button>
