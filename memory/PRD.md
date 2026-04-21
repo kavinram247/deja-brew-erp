@@ -29,17 +29,11 @@ Build a complete ERP system for cafe "Deja Brew" with:
 
 ## Completed (Feb 2026)
 - V1 MVP: base models, login, seed owner, walk-ins, billing, inventory, float, menu, dashboard (DONE)
-- V2 Pivot (all DONE and E2E tested):
-  - Separate `/entry/*` Employee and `/dashboard/*` Owner routes
-  - Role-based redirect on login
-  - Recipe-driven inventory deduction on bill POST
-  - Void bill restores deductions
-  - Routines with ingredient mapping + execution log
-  - Menu Management with recipe modal (inventory dropdown)
-  - Banking (Owner-only cash-handover log)
-  - Owner Dashboards: Overview, Walk-ins, Sales, Purchases, Inventory, Billing+Void, Banking, Settings
-  - DateRangeToolbar (Today/7Days/Month/Custom)
-  - Settings → user management (create/delete employees and owners)
+- V2 Pivot (DONE, E2E tested): Separate Employee/Owner routes, recipe-driven deduction, void restores inventory, Routines, Menu recipes, Banking, Owner Dashboards, DateRangeToolbar, Settings.
+- V3 Delta (DONE, E2E tested 2026-02-21):
+  - Void ownership moved to employees (backend + new `/entry/bills` page with confirmation modal). Owner Dashboard Billing is now read-only.
+  - Shadcn-themed `ThemeDatePicker` replacing native `<input type="date">` on Walk-ins / Purchases / Entry Bills / Dashboard Billing / DateRangeToolbar Custom range.
+  - CSV export buttons on Overview, Sales, and Billing dashboards (`utils/csv.js`).
 
 ## Test Status
 - `/app/test_reports/iteration_2.json`: Backend 100% (35/35 pytest), Frontend 100% (Playwright RBAC + all pages).
@@ -47,19 +41,17 @@ Build a complete ERP system for cafe "Deja Brew" with:
 
 ## Roadmap (Prioritized Backlog)
 
-### P1
-- Replace native HTML date input on WalkIns/Purchases/DBilling with shadcn DatePicker for theme consistency
-- Data-testid on DateRangeToolbar container (minor testability improvement)
-- Login page: show seed credentials hint in dev builds
-- Daily close-of-day summary report (revenue + cash expected vs deposited)
+### P1 (active)
+- Daily close-of-day summary report (revenue + cash expected vs deposited + float spent) — deferred by user
+- PDF export (currently CSV-only)
 
 ### P2
-- Export reports (CSV/PDF) from Owner Dashboards
+- Export CSV/PDF on Walk-ins / Purchases / Banking dashboards (currently only Overview / Sales / Billing)
 - Low-stock email/WhatsApp alerts
 - Waste/spoilage tracking in inventory
 - Multi-outlet support (future expansion)
 - Shift-wise employee performance on Walk-ins/Billing
-- Audit log of voided bills
+- Audit log of voided bills (with reason field, stored)
 
 ### P3
 - SMS/WhatsApp receipts to customers with phone number on bill
