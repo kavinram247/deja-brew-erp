@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Users, Receipt, ShoppingBag, TrendingUp, AlertTriangle, Wallet, Coffee, Download } from "lucide-react";
+import { Users, Receipt, ShoppingBag, TrendingUp, AlertTriangle, Wallet, Coffee, Download, FileText } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 import DateRangeToolbar, { computeRange } from "../../components/DateRangeToolbar";
 import { downloadCsv } from "../../utils/csv";
+import { downloadPdf } from "../../utils/pdf";
 
 function StatCard({ icon: Icon, label, value, sub, color = "#8B5A2B", testid }) {
   return (
@@ -76,6 +77,33 @@ export default function Overview() {
     toast.success(`Exported ${rows.length} day(s)`);
   };
 
+  const exportPdf = () => {
+    if (rows.length === 0) { toast.error("No data to export"); return; }
+    const cols = [
+      { key: "date", label: "Date" },
+      { key: "offline_revenue", label: "Offline ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
+      { key: "online_revenue", label: "Online ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
+      { key: "total_revenue", label: "Total ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
+      { key: "bills", label: "Bills" },
+      { key: "walkins", label: "Walk-ins" },
+      { key: "guests", label: "Guests" },
+      { key: "cash", label: "Cash ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
+      { key: "upi", label: "UPI ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
+    ];
+    downloadPdf(rows, cols, {
+      filename: `dejabrew-overview-${range.from}_to_${range.to}.pdf`,
+      title: "Business Overview",
+      subtitle: rangeLabel,
+      summaryLines: [
+        { label: "Total Revenue", value: `₹${totals.total.toLocaleString("en-IN")}` },
+        { label: "Offline / Online", value: `₹${totals.offline.toLocaleString("en-IN")} / ₹${totals.online.toLocaleString("en-IN")}` },
+        { label: "Bills / Walk-ins", value: `${totals.bills} / ${totals.walkins} (${totals.guests} guests)` },
+        { label: "Cash / UPI", value: `₹${totals.cash.toLocaleString("en-IN")} / ₹${totals.upi.toLocaleString("en-IN")}` },
+      ],
+    });
+    toast.success("PDF ready");
+  };
+
   return (
     <div style={{ fontFamily: "Figtree, sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -88,6 +116,11 @@ export default function Overview() {
           className="flex items-center gap-2 bg-[#3E5C46] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#2F4735]"
           data-testid="export-overview-csv">
           <Download size={14} /> CSV
+        </button>
+        <button onClick={exportPdf}
+          className="flex items-center gap-2 bg-[#8B5A2B] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822]"
+          data-testid="export-overview-pdf">
+          <FileText size={14} /> PDF
         </button>
       </div>
 

@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only testing of P1 PDF export feature on /dashboard/overview, /dashboard/sales, /dashboard/billing. All 3 PDF buttons produce valid PDFs (correct filename, >1KB, %PDF- magic header). CSV regression intact. Empty-state toast works. Button colors match spec (CSV #3E5C46 green, PDF #8B5A2B brown). Login + role redirect + date browsing regressions still working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "pdf.js: summary-card label/value columns are hard-coded (label at x=52, value at x=200). Long labels (e.g. 'Offline (Bills)' with trailing '(X bills, avg ₹YYY)' in DSales) may overflow into the value column on narrow content. Minor visual issue, not blocking.",
+    "DSales exportPdf includes 'platforms' column whose format can produce very long cell text; jspdf-autotable handles wrapping but may push rows taller. Consider truncating or adding a dedicated platforms section.",
+    "DBilling summaryLines treats voided.length as numeric without trailing currency; fine, but value column color (coffee brown #8B5A2B) is applied via doc.setTextColor in pdf.js globally—intentional. No functional issue.",
+    "All 3 exportPdf functions duplicate the column definitions inline. If PDF schema changes, 3 files must be updated. Consider extracting shared column-map helpers (DRY).",
+    "pdf.js uses doc.text(String(v)) without any cell-length truncation; extremely long strings could break table layout. Acceptable for current data volume."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not tested)", "frontend": "100%"},
+  "test_credentials": "owner@dejabrew.com / BrewOwner2024 (verified working)",
+  "seed_data_creation": "Not needed — today (2026-04-21) already had 2 active bills and analytics data from prior test iterations.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "PDF export feature is fully verified via Playwright expect_download. Validation method: suggested_filename prefix/suffix + file size >1KB + first 5 bytes == b'%PDF-'. Button color test should move mouse off element first (mouse.move(10,10) + wait 500ms) otherwise hover state (#704822) is captured instead of base #8B5A2B. Empty-state was reproduced by clicking the chevron-left arrow on /dashboard/billing until date had 0 bills (ThemeDatePicker is a custom button, not a native input, so page.fill() doesn't work on it).",
+  "test_results": {
+    "overview_pdf_download": "PASS (dejabrew-overview-2026-04-21_to_2026-04-21.pdf, 9761 bytes, %PDF-)",
+    "sales_pdf_download": "PASS (dejabrew-sales-2026-04-01_to_2026-04-21.pdf, 48819 bytes, %PDF-)",
+    "billing_pdf_download": "PASS (dejabrew-bills-2026-04-21.pdf, 23460 bytes, %PDF-)",
+    "csv_buttons_still_present_all_3_pages": "PASS",
+    "csv_overview_regression_download": "PASS",
+    "button_colors_csv_green_pdf_brown": "PASS (csv rgb(62,92,70), pdf rgb(139,90,43))",
+    "empty_state_toast_billing": "PASS (no download, toast 'No bills to export' shown)",
+    "login_and_owner_role_redirect_to_overview": "PASS"
+  }
+}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download } from "lucide-react";
+import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download, FileText } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
 import { downloadCsv } from "../../utils/csv";
+import { downloadPdf } from "../../utils/pdf";
 
 function fmt(iso) {
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
@@ -57,6 +58,30 @@ export default function DBilling() {
     toast.success(`Exported ${bills.length} bill(s)`);
   };
 
+  const exportPdf = () => {
+    if (bills.length === 0) { toast.error("No bills to export"); return; }
+    const cols = [
+      { key: "bill_number", label: "Bill No" },
+      { key: "created_at", label: "Time", format: (v) => v ? fmt(v) : "" },
+      { key: "customer_name", label: "Customer" },
+      { key: "items", label: "Items", format: (v) => (v || []).map((i) => `${i.name}×${i.quantity}`).join(", ") },
+      { key: "payment_mode", label: "Pay", format: (v) => v === "cash+upi" ? "Split" : (v || "").toUpperCase() },
+      { key: "total", label: "Total ₹", format: (v) => (v || 0).toFixed(2) },
+      { key: "is_voided", label: "Status", format: (v) => v ? "Voided" : "Active" },
+    ];
+    downloadPdf(bills, cols, {
+      filename: `dejabrew-bills-${date}.pdf`,
+      title: "Billing Report",
+      subtitle: date === today ? "Today" : date,
+      summaryLines: [
+        { label: "Active Bills", value: `${active.length} (₹${totalRev.toLocaleString("en-IN")})` },
+        { label: "Voided", value: voided.length },
+        { label: "Cash / UPI", value: `₹${totalCash.toLocaleString("en-IN")} / ₹${totalUpi.toLocaleString("en-IN")}` },
+      ],
+    });
+    toast.success("PDF ready");
+  };
+
   return (
     <div style={{ fontFamily: "Figtree, sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -74,6 +99,11 @@ export default function DBilling() {
             className="flex items-center gap-2 ml-1 bg-[#3E5C46] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#2F4735]"
             data-testid="export-bills-csv">
             <Download size={14} /> CSV
+          </button>
+          <button onClick={exportPdf}
+            className="flex items-center gap-2 bg-[#8B5A2B] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822]"
+            data-testid="export-bills-pdf">
+            <FileText size={14} /> PDF
           </button>
         </div>
       </div>
