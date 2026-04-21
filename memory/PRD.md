@@ -34,6 +34,8 @@ Build a complete ERP system for cafe "Deja Brew" with:
   - Void ownership moved to employees (backend + new `/entry/bills` page with confirmation modal). Owner Dashboard Billing is now read-only.
   - Shadcn-themed `ThemeDatePicker` replacing native `<input type="date">` on Walk-ins / Purchases / Entry Bills / Dashboard Billing / DateRangeToolbar Custom range.
   - CSV export buttons on Overview, Sales, and Billing dashboards (`utils/csv.js`).
+- V4 Delta (DONE, E2E tested 2026-02-21):
+  - Branded PDF export on Overview / Sales / Billing (`utils/pdf.js`) using jsPDF + autotable — coffee-brown header, summary card, striped table, page numbers.
 
 ## Test Status
 - `/app/test_reports/iteration_2.json`: Backend 100% (35/35 pytest), Frontend 100% (Playwright RBAC + all pages).
@@ -43,10 +45,9 @@ Build a complete ERP system for cafe "Deja Brew" with:
 
 ### P1 (active)
 - Daily close-of-day summary report (revenue + cash expected vs deposited + float spent) — deferred by user
-- PDF export (currently CSV-only)
 
 ### P2
-- Export CSV/PDF on Walk-ins / Purchases / Banking dashboards (currently only Overview / Sales / Billing)
+- Extend CSV + PDF export to Walk-ins / Purchases / Banking dashboards (currently only Overview / Sales / Billing)
 - Low-stock email/WhatsApp alerts
 - Waste/spoilage tracking in inventory
 - Multi-outlet support (future expansion)

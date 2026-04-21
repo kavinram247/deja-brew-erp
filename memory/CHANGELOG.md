@@ -1,5 +1,11 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-21 — Delta v4 (PDF Export)
+- Added branded PDF export buttons on Overview / Sales / Billing dashboards using `jsPDF` + `jspdf-autotable`.
+- Utility: `/app/frontend/src/utils/pdf.js` — coffee-brown header band, summary card, striped autoTable, footer with page count.
+- CSV export retained alongside PDF.
+- Tests: iteration_4.json — frontend 100%, zero issues.
+
 ## 2026-02-21 — Delta v3 (Void + DatePicker + CSV Exports)
 - **Void ownership transferred to employees**: Backend `/api/bills/{id}/void` no longer requires `owner` role; any authenticated user can void.
 - **New page** `/entry/bills` (Bills.jsx) — lists day's bills, view detail modal, void with inventory-restoration confirmation modal.
