@@ -17,6 +17,7 @@ import EntryBilling   from "./pages/entry/Billing";
 import EntryBills     from "./pages/entry/Bills";
 import Routines       from "./pages/entry/Routines";
 import EntryMenu      from "./pages/entry/MenuPage";
+import EntryBanking   from "./pages/entry/Banking";
 
 // Dashboard pages
 import Overview     from "./pages/dashboard/Overview";
@@ -71,6 +72,7 @@ function App() {
             <Route path="bills"      element={<EntryBills />} />
             <Route path="routines"  element={<Routines />} />
             <Route path="menu"      element={<EntryMenu />} />
+            <Route path="banking"   element={<EntryBanking />} />
           </Route>
 
           {/* Dashboard — owner only */}
