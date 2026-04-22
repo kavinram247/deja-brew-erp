@@ -25,9 +25,16 @@ from routes.banking_router import router as banking_router
 app = FastAPI(title="Deja Brew ERP", redirect_slashes=False)
 
 frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# Support comma-separated list of allowed origins (for preview + prod Vercel URLs)
+extra_origins = os.environ.get("ALLOWED_ORIGINS", "")
+origins = [o.strip() for o in frontend_url.split(",") if o.strip()]
+origins += [o.strip() for o in extra_origins.split(",") if o.strip()]
+if "http://localhost:3000" not in origins:
+    origins.append("http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

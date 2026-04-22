@@ -12,6 +12,7 @@ from auth_utils import (
     get_jwt_secret,
     JWT_ALGORITHM,
 )
+from cookie_utils import cookie_kwargs, delete_cookie_kwargs
 from bson import ObjectId
 import jwt
 
@@ -31,12 +32,8 @@ class RegisterInput(BaseModel):
 
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
-    response.set_cookie(
-        "access_token", access_token, httponly=True, secure=False, samesite="lax", max_age=36000, path="/"
-    )
-    response.set_cookie(
-        "refresh_token", refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/"
-    )
+    response.set_cookie("access_token", access_token, **cookie_kwargs(36000))
+    response.set_cookie("refresh_token", refresh_token, **cookie_kwargs(604800))
 
 
 @router.post("/login")
@@ -55,8 +52,9 @@ async def login(input: LoginInput, response: Response):
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/")
+    kw = delete_cookie_kwargs()
+    response.delete_cookie("access_token", **kw)
+    response.delete_cookie("refresh_token", **kw)
     return {"message": "Logged out"}
 
 
@@ -104,7 +102,7 @@ async def refresh(request: Request, response: Response):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         access_token = create_access_token(str(user["_id"]), user["email"])
-        response.set_cookie("access_token", access_token, httponly=True, secure=False, samesite="lax", max_age=36000, path="/")
+        response.set_cookie("access_token", access_token, **cookie_kwargs(36000))
         return {"message": "Token refreshed"}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
