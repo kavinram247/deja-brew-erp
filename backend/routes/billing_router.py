@@ -65,6 +65,17 @@ async def deduct_inventory(db, items: list, bill_id: str) -> list:
     return deductions
 
 
+async def restore_inventory(db, deductions: list):
+    for d in deductions or []:
+        try:
+            await db.inventory.update_one(
+                {"_id": ObjectId(d["inventory_item_id"])},
+                {"$inc": {"current_stock": d.get("quantity_deducted", 0)}},
+            )
+        except Exception:
+            pass
+
+
 def serialize(doc):
     if not doc:
         return None
@@ -142,3 +153,53 @@ async def get_bill(bill_id: str, request: Request):
     if not bill:
         raise HTTPException(404, "Bill not found")
     return serialize(bill)
+
+
+@router.put("/{bill_id}")
+async def update_bill(bill_id: str, input: BillCreate, request: Request):
+    """Fully edit a bill. Reverses previous inventory deduction and applies fresh one."""
+    db = get_db()
+    user = await get_current_user(request, db)
+    existing = await db.bills.find_one({"_id": ObjectId(bill_id)})
+    if not existing:
+        raise HTTPException(404, "Bill not found")
+
+    # 1. Restore prior inventory deductions
+    await restore_inventory(db, existing.get("inventory_deductions", []))
+
+    # 2. Recompute amounts
+    calc_items = [calc_item(i) for i in input.items]
+    subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
+    taxable = round(max(0, subtotal - input.overall_discount), 2)
+    cgst = round(taxable * TAX_RATE, 2)
+    sgst = round(taxable * TAX_RATE, 2)
+    total = round(taxable + cgst + sgst, 2)
+
+    if input.payment_mode == "cash":
+        cash, upi = total, 0.0
+    elif input.payment_mode == "upi":
+        cash, upi = 0.0, total
+    else:
+        cash, upi = input.cash_amount, input.upi_amount
+
+    # 3. Apply fresh deductions
+    deductions = await deduct_inventory(db, calc_items, bill_id)
+
+    # 4. Persist updated bill
+    update = {
+        "customer_name": input.customer_name,
+        "customer_phone": input.customer_phone,
+        "items": calc_items,
+        "subtotal": subtotal,
+        "overall_discount": input.overall_discount,
+        "taxable_amount": taxable,
+        "cgst": cgst, "sgst": sgst, "total": total,
+        "payment_mode": input.payment_mode,
+        "cash_amount": cash, "upi_amount": upi,
+        "inventory_deductions": deductions,
+        "last_edited_at": datetime.now(timezone.utc).isoformat(),
+        "last_edited_by": user.get("id"),
+    }
+    await db.bills.update_one({"_id": ObjectId(bill_id)}, {"$set": update})
+    updated = await db.bills.find_one({"_id": ObjectId(bill_id)})
+    return serialize(updated)

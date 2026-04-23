@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat } from "lucide-react";
+import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
 
@@ -21,6 +22,8 @@ export default function Billing() {
   // Inline walk-in logging
   const [logWalkin, setLogWalkin] = useState(false);
   const [walkinGuests, setWalkinGuests] = useState(1);
+
+  const { printBill, printKot, PrintHost } = usePrint();
 
   useEffect(() => {
     api.get("/menu?active_only=true").then((r) => setMenuItems(r.data)).catch(() => toast.error("Failed to load menu"));
@@ -101,7 +104,22 @@ export default function Billing() {
           <h1 className="text-3xl font-bold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Billing</h1>
           {lastBill && <p className="text-xs text-green-600 mt-0.5">Last: {lastBill.bill_number} · ₹{lastBill.total?.toFixed(2)}</p>}
         </div>
+        {lastBill && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => printKot(lastBill)}
+              className="flex items-center gap-1.5 bg-[#3E5C46] text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-[#2F4735]"
+              data-testid="print-kot-btn">
+              <ChefHat size={14} /> Print KOT
+            </button>
+            <button onClick={() => printBill(lastBill)}
+              className="flex items-center gap-1.5 bg-[#8B5A2B] text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-[#704822]"
+              data-testid="print-bill-btn">
+              <Printer size={14} /> Print Bill
+            </button>
+          </div>
+        )}
       </div>
+      <PrintHost />
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* LEFT: Menu */}

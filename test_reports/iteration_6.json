@@ -1,0 +1,53 @@
+{
+  "summary": "Delta v7 testing complete - Bills page restored, PUT /bills/{id} edit with inventory rebalance, thermal print bill/KOT from Billing header and every Bills row all verified. 8/8 backend tests pass, all frontend flows pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_delta_v7.py",
+    "/app/test_reports/pytest/v7_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "billing_router.restore_inventory uses silent try/except so inventory restore failures are swallowed. If an ObjectId is malformed in historical deductions, the inventory will drift without any log. Consider logging.warning on exception.",
+    "PUT /bills/{bill_id} does not validate ObjectId format — malformed id raises bson.errors.InvalidId → 500. Should wrap in try/except and raise 400.",
+    "PUT /bills/{bill_id} uses same BillCreate schema, so total/subtotal on wire are ignored and recomputed on server. Good. But missing a unique bill_number field in update — which is correct (immutable), could document.",
+    "usePrint.js uses setTimeout(50) before window.print(). In slow browsers the state update may not have flushed; consider useEffect on bill+kind to trigger print, more deterministic.",
+    "PrintableReceipt.jsx hardcodes CAFE constants — fine for single-outlet, but not config-driven. Should move to backend /api/settings when multi-outlet arrives.",
+    "Bills.jsx EditModal: 'Save' does not validate that cash+upi totals equal bill total for cash+upi payment mode (Billing.jsx does this check). Should add same validation.",
+    "Bills.jsx EditModal: quantity can be decremented to 0 via the Minus button, but save sends quantity=1 fallback silently. Either hide Minus at qty=1 or block save with qty=0.",
+    "billing_router.py: leftover is_voided:False and unused /void handler removed cleanly (returns 404). Dead field on doc is low priority cleanup."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_delta_v7.py (new)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (all 7 delta v7 items verified)"},
+  "test_credentials": "owner@dejabrew.com / BrewOwner2024 (verified)",
+  "seed_data_creation": "Created TEST_v7_milk inventory, TEST_v7_latte menu item + recipe, TEST_v7_edit_rebalance bill for edit/rebalance test. Cleaned up within fixtures. Also UI_TEST_v7 bill created via Billing page (not cleaned, minor data).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Bills page at /entry/bills with testids: entry-bills-date, eb-count/rev/cash/upi, eb-row-<id>, view-eb-<id>, edit-eb-<id>, print-bill-<id>, print-kot-<id>. Edit modal: edit-bill-name, edit-bill-phone, edit-item-name-<idx>, edit-item-price-<idx>, edit-item-qty-<idx>, remove-item-<idx>, edit-overall-disc, edit-pay-cash|upi|cash+upi, save-edit-bill-btn. Billing header prints: print-bill-btn, print-kot-btn (only when lastBill). For print testing override window.print: page.evaluate('() => { window.__printCalls = 0; window.print = () => window.__printCalls++; }') and assert document.querySelector('.print-root .print-receipt[data-receipt-kind=\"bill\"|\"kot\"]'). Backend inventory requires min_quantity not reorder_level; banking POST is /api/banking with depositor_name; recipes need menu_item_name.",
+  "verified_flows": {
+    "put_bills_edit_inventory_rebalance": "PASS - qty 1->2 deducts extra 100ml, 2->1 restores 100ml, net matches source-of-truth (backend test)",
+    "put_bills_404_unknown": "PASS",
+    "float_opening_5300": "PASS - GET /api/float/today returns 5300",
+    "bills_page_ui": "PASS - header 'Bills · Customer Details', 4 stat cards, date picker, all row testids present",
+    "edit_modal_ui": "PASS - all fields prefilled & editable, save closes modal, toast 'DB... updated · inventory rebalanced' shown, row refreshed",
+    "print_bill_from_billing_header": "PASS - clicking print-bill-btn calls window.print and .print-root .print-receipt[data-receipt-kind='bill'] exists",
+    "print_kot_from_billing_header": "PASS - clicking print-kot-btn renders data-receipt-kind='kot'",
+    "print_bill_from_bills_row": "PASS",
+    "print_kot_from_bills_row": "PASS",
+    "sidebar_bills_nav": "PASS - nav-bills entry visible between Billing and Routines",
+    "void_endpoint_still_404": "PASS",
+    "walkin_inline": "PASS - POST /api/walkins still 200",
+    "misc_payments_crud": "PASS",
+    "banking_backdated": "PASS - /api/banking with date='2026-01-10' accepted",
+    "inventory_without_cost_per_unit": "PASS"
+  }
+}
