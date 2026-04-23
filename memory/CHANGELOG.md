@@ -1,5 +1,13 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-24 — Delta v7 (Bills page restored + Edit + Thermal Print)
+- **Bills page restored at `/entry/bills`** — renamed "Customer Details" — shows full columns (bill #, name, mobile, order ₹, discount, tax, total, payment, date+time, actions). Nav entry restored.
+- **Full manual edit** — every field of a bill editable (customer, items w/ price/qty/discount %, overall discount, payment mode). Backend `PUT /api/bills/{id}` reverses prior inventory deductions then re-applies new ones so stock stays net-correct.
+- **Thermal Print Bill + KOT** — 80mm thermal format via CSS `@media print`. Buttons appear on new bill confirmation in `/entry/billing` and on every row in `/entry/bills`. Bill matches user's sample (Deja Brew header, address, phone, GSTIN, FSSAI, ITEM/PRICE/QTY/SUB table, CGST:2.50%/SGST:2.50%, Settlement Type, Cust mobile). KOT: token, bill no, date, QTY/Dish Name/Remarks.
+- **Float 5200→5300 (per choice C)** — constant updated in v6; existing rows left alone; any new date gets ₹5300.
+- New files: `PrintableReceipt.jsx`, `usePrint.js`, restored `Bills.jsx`, added thermal CSS to `App.css`.
+- Tests: iteration_6.json — 8/8 backend, full frontend E2E — 100%.
+
 ## 2026-02-23 — Delta v6 (6 UX refinements)
 1. **Walk-in inline on Billing** — checkbox + guest count in the customer details section of `/entry/billing`; on submit a walk-in is auto-posted alongside the bill.
 2. **Float opening: ₹5200 → ₹5300**.
