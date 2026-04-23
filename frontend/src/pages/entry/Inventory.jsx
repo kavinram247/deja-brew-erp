@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, AlertTriangle, Package } from "lucide-react";
 const SECTIONS = ["Barista", "Kitchen", "Other"];
 const UNITS = ["kg", "g", "liters", "ml", "pieces", "packets", "bottles", "boxes"];
 const CATS = ["Beverages", "Dairy", "Dry Goods", "Produce", "Packaging", "Cleaning", "Other"];
-const EMPTY = { name: "", category: "Dry Goods", section: "Barista", current_stock: 0, unit: "kg", min_quantity: 0, cost_per_unit: 0 };
+const EMPTY = { name: "", category: "Dry Goods", section: "Barista", current_stock: 0, unit: "kg", min_quantity: 0 };
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
@@ -34,7 +34,7 @@ export default function Inventory() {
 
   const openAdd = () => { setForm(EMPTY); setEditItem(null); setShowForm(true); };
   const openEdit = (it) => {
-    setForm({ name: it.name, category: it.category, section: it.section || "Other", current_stock: it.current_stock ?? it.quantity ?? 0, unit: it.unit, min_quantity: it.min_quantity, cost_per_unit: it.cost_per_unit });
+    setForm({ name: it.name, category: it.category, section: it.section || "Other", current_stock: it.current_stock ?? it.quantity ?? 0, unit: it.unit, min_quantity: it.min_quantity });
     setEditItem(it); setShowForm(true);
   };
 
@@ -105,7 +105,7 @@ export default function Inventory() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-amber-900/10">
-                  {["Item", "Section", "Stock", "Min Stock", "Cost/Unit", "Status", ""].map((h) => (
+                  {["Item", "Section", "Stock", "Min Stock", "Status", ""].map((h) => (
                     <th key={h} className="text-left text-xs text-[#8A7D71] uppercase tracking-wider px-5 py-3 font-medium">{h}</th>
                   ))}
                 </tr></thead>
@@ -119,7 +119,6 @@ export default function Inventory() {
                         <td className="px-5 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${item.section === "Barista" ? "bg-amber-100 text-amber-700" : item.section === "Kitchen" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{item.section || "Other"}</span></td>
                         <td className="px-5 py-3"><span className={`font-semibold ${low ? "text-red-600" : "text-[#3E5C46]"}`}>{stock} {item.unit}</span></td>
                         <td className="px-5 py-3 text-[#8A7D71]">{item.min_quantity} {item.unit}</td>
-                        <td className="px-5 py-3 text-[#5C4F43]">₹{item.cost_per_unit}</td>
                         <td className="px-5 py-3">
                           {stock === 0
                             ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium"><AlertTriangle size={9} /> Out</span>
@@ -183,11 +182,6 @@ export default function Inventory() {
                 <div>
                   <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Min Stock (Alert)</label>
                   <input type="number" step="0.01" value={form.min_quantity} onChange={(e) => setForm({ ...form, min_quantity: parseFloat(e.target.value) || 0 })}
-                    className="w-full rounded-xl border border-amber-900/20 px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]" />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Cost/Unit (₹)</label>
-                  <input type="number" step="0.01" value={form.cost_per_unit} onChange={(e) => setForm({ ...form, cost_per_unit: parseFloat(e.target.value) || 0 })}
                     className="w-full rounded-xl border border-amber-900/20 px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]" />
                 </div>
               </div>

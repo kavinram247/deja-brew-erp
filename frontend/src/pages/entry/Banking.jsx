@@ -14,7 +14,7 @@ export default function EntryBanking() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ amount: "", depositor_name: "", notes: "" });
+  const [form, setForm] = useState({ amount: "", depositor_name: "", notes: "", date: today });
   const [saving, setSaving] = useState(false);
 
   const load = async (d = date) => {
@@ -44,11 +44,12 @@ export default function EntryBanking() {
         amount: parseFloat(form.amount),
         depositor_name: form.depositor_name,
         notes: form.notes || null,
+        date: form.date || null,
       });
-      if (isToday) setEntries((p) => [data, ...p]);
-      setForm({ amount: "", depositor_name: "", notes: "" });
+      if (data.date === date) setEntries((p) => [data, ...p]);
+      setForm({ amount: "", depositor_name: "", notes: "", date: today });
       setShowForm(false);
-      toast.success("Cash handover recorded");
+      toast.success(`Cash handover recorded${data.date !== date ? ` for ${data.date}` : ""}`);
     } catch { toast.error("Failed"); }
     finally { setSaving(false); }
   };
@@ -144,6 +145,11 @@ export default function EntryBanking() {
               <button onClick={() => setShowForm(false)} className="text-[#8A7D71]"><X size={18} /></button>
             </div>
             <form onSubmit={handleAdd} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Handover Date *</label>
+                <ThemeDatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} max={today} testid="eb-date" />
+                <p className="text-[10px] text-[#8A7D71] mt-1">Defaults to today; change to backdate an entry.</p>
+              </div>
               <div>
                 <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Amount (₹) *</label>
                 <input type="number" step="0.01" value={form.amount}

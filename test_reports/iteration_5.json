@@ -1,0 +1,45 @@
+{
+  "summary": "Delta v6 testing complete - all 6 requested changes verified. 13/13 backend tests pass (Float opening=5300, Misc Payments CRUD, Inventory without cost_per_unit, Banking backdated, Void endpoint removed 404, Walk-in inline). Frontend UI verified via Playwright: inline walk-in checkbox+guests input on Billing, Misc Payments full modal with all data-testids, owner dashboard read-only, Inventory table/modal has no Cost/Unit, DBilling has no Status/Void column or button, /entry/bills redirects away, Banking modal has eb-date picker, sidebar Bills gone + Misc Payments added.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_delta_v6.py",
+    "/app/test_reports/pytest/v6_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "misc_payments_router.py: delete endpoint does not check if ObjectId is valid before calling ObjectId(entry_id); could raise 500 on malformed id. Minor - wrap in try/except or validate.",
+    "billing_router.py: still stores is_voided:False on every bill - dead field since void is removed. Safe to keep for now, but consider cleanup on next migration.",
+    "Banking/Misc Payment POST endpoints accept arbitrary date strings without validating YYYY-MM-DD format. Pydantic could enforce regex pattern for stricter contract.",
+    "float_router.FLOAT_OPENING is a module constant; if business wants to change it again, it requires code deploy. Consider config/env var.",
+    "MiscPayments router has no update (PUT) endpoint - only create/delete. Acceptable if product doesn't need edit, otherwise note as gap."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_delta_v6.py (new)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% (all 6 delta features verified)"},
+  "test_credentials": "owner@dejabrew.com / BrewOwner2024 (verified working)",
+  "seed_data_creation": "Test data created and cleaned up within tests (TEST_ prefix). One existing misc payment row remained from prior iteration alongside the freshly created one, was deleted after test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file /app/backend/tests/test_delta_v6.py covers all delta v6 items. For Playwright, useful selectors: billing-log-walkin-toggle, billing-walkin-guests, misc-add-btn, misc-amount, misc-source, misc-category, misc-mode-cash, misc-save-btn, misc-row-<id>, del-misc-<id>, misc-date-picker, eb-date. Owner can visit /entry/* routes (no owner-block). /entry/bills redirects to /dashboard/overview (fallback). DBilling headers confirmed: Bill #, Time, Customer, Items, Payment, Total, (actions-blank).",
+  "verified_flows": {
+    "float_opening_5300": "PASS - GET /api/float/today returns 5300.0",
+    "misc_payments_backend_crud": "PASS - create/list/list-all/custom-date/delete/auth-required all pass",
+    "misc_payments_employee_ui": "PASS - all data-testids present, create+delete round-trip works",
+    "misc_payments_owner_ui_readonly": "PASS - no add button, no delete buttons",
+    "inventory_no_cost_per_unit": "PASS - backend accepts missing field (default 0.0), frontend table and modal have no Cost/Unit",
+    "banking_backdated": "PASS - POST with date:'2026-01-15' stores that date; default today when omitted; modal has eb-date ThemeDatePicker",
+    "void_removed": "PASS - POST /api/bills/{id}/void returns 404, /entry/bills route redirects, sidebar Bills link gone, DBilling no Status/Void column or button",
+    "billing_inline_walkin_ui": "PASS - billing-log-walkin-toggle checkbox present, toggling reveals billing-walkin-guests input",
+    "walkin_backend_still_working": "PASS - POST /api/walkins succeeds, confirming inline walk-in will post successfully",
+    "bill_create_regression": "PASS - bill creation still works, is_voided defaults False"
+  }
+}

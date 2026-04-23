@@ -65,17 +65,6 @@ async def deduct_inventory(db, items: list, bill_id: str) -> list:
     return deductions
 
 
-async def restore_inventory(db, deductions: list):
-    for d in deductions:
-        try:
-            await db.inventory.update_one(
-                {"_id": ObjectId(d["inventory_item_id"])},
-                {"$inc": {"current_stock": d["quantity_deducted"]}},
-            )
-        except Exception:
-            pass
-
-
 def serialize(doc):
     if not doc:
         return None
@@ -143,25 +132,6 @@ async def create_bill(input: BillCreate, request: Request):
     doc["_id"] = result.inserted_id
     doc["inventory_deductions"] = deductions
     return serialize(doc)
-
-
-@router.post("/{bill_id}/void")
-async def void_bill(bill_id: str, request: Request):
-    db = get_db()
-    user = await get_current_user(request, db)
-    bill = await db.bills.find_one({"_id": ObjectId(bill_id)})
-    if not bill:
-        raise HTTPException(404, "Bill not found")
-    if bill.get("is_voided"):
-        raise HTTPException(400, "Bill already voided")
-    await restore_inventory(db, bill.get("inventory_deductions", []))
-    now = datetime.now(timezone.utc)
-    await db.bills.update_one(
-        {"_id": ObjectId(bill_id)},
-        {"$set": {"is_voided": True, "voided_at": now.isoformat(), "voided_by": user.get("id")}},
-    )
-    updated = await db.bills.find_one({"_id": ObjectId(bill_id)})
-    return serialize(updated)
 
 
 @router.get("/{bill_id}")

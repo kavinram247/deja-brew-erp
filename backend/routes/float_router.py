@@ -8,7 +8,7 @@ import uuid
 
 router = APIRouter()
 
-FLOAT_OPENING = 5200.0
+FLOAT_OPENING = 5300.0
 
 
 class FloatExpenseCreate(BaseModel):

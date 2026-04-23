@@ -91,7 +91,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Float Balance"
-          value={`₹${(stats?.float?.balance ?? 5200).toLocaleString("en-IN")}`}
+          value={`₹${(stats?.float?.balance ?? 5300).toLocaleString("en-IN")}`}
           sub={`₹${(stats?.float?.spent ?? 0).toFixed(0)} spent`}
           icon={Wallet}
           color={stats?.float?.balance < 2000 ? "#B84B4B" : "#D48B3D"}

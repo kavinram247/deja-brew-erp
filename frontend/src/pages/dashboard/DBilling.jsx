@@ -31,11 +31,9 @@ export default function DBilling() {
     setDate(dt.toISOString().split("T")[0]);
   };
 
-  const active = bills.filter((b) => !b.is_voided);
-  const voided = bills.filter((b) => b.is_voided);
-  const totalRev = active.reduce((s, b) => s + b.total, 0);
-  const totalCash = active.reduce((s, b) => s + (b.cash_amount || 0), 0);
-  const totalUpi = active.reduce((s, b) => s + (b.upi_amount || 0), 0);
+  const totalRev = bills.reduce((s, b) => s + b.total, 0);
+  const totalCash = bills.reduce((s, b) => s + (b.cash_amount || 0), 0);
+  const totalUpi = bills.reduce((s, b) => s + (b.upi_amount || 0), 0);
 
   const exportCsv = () => {
     if (bills.length === 0) { toast.error("No bills to export"); return; }
@@ -53,7 +51,6 @@ export default function DBilling() {
       { key: "payment_mode", label: "Payment" },
       { key: "cash_amount", label: "Cash" },
       { key: "upi_amount", label: "UPI" },
-      { key: "is_voided", label: "Voided", format: (v) => v ? "Yes" : "No" },
     ]);
     toast.success(`Exported ${bills.length} bill(s)`);
   };
@@ -67,15 +64,13 @@ export default function DBilling() {
       { key: "items", label: "Items", format: (v) => (v || []).map((i) => `${i.name}×${i.quantity}`).join(", ") },
       { key: "payment_mode", label: "Pay", format: (v) => v === "cash+upi" ? "Split" : (v || "").toUpperCase() },
       { key: "total", label: "Total ₹", format: (v) => (v || 0).toFixed(2) },
-      { key: "is_voided", label: "Status", format: (v) => v ? "Voided" : "Active" },
     ];
     downloadPdf(bills, cols, {
       filename: `dejabrew-bills-${date}.pdf`,
       title: "Billing Report",
       subtitle: date === today ? "Today" : date,
       summaryLines: [
-        { label: "Active Bills", value: `${active.length} (₹${totalRev.toLocaleString("en-IN")})` },
-        { label: "Voided", value: voided.length },
+        { label: "Bills", value: `${bills.length} (₹${totalRev.toLocaleString("en-IN")})` },
         { label: "Cash / UPI", value: `₹${totalCash.toLocaleString("en-IN")} / ₹${totalUpi.toLocaleString("en-IN")}` },
       ],
     });
@@ -110,7 +105,7 @@ export default function DBilling() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Active Bills", value: active.length, color: "#3E5C46", testid: "db-active" },
+          { label: "Bills", value: bills.length, color: "#3E5C46", testid: "db-active" },
           { label: "Revenue", value: `₹${totalRev.toLocaleString("en-IN")}`, color: "#8B5A2B", testid: "db-revenue" },
           { label: "Cash", value: `₹${totalCash.toLocaleString("en-IN")}`, color: "#D48B3D", testid: "db-cash" },
           { label: "UPI", value: `₹${totalUpi.toLocaleString("en-IN")}`, color: "#C06C4C", testid: "db-upi" },
@@ -125,7 +120,7 @@ export default function DBilling() {
       <div className="bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
         <div className="px-5 py-4 border-b border-amber-900/10">
           <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>
-            {bills.length} bill{bills.length !== 1 ? "s" : ""} {voided.length > 0 && <span className="text-xs text-[#B84B4B] ml-2">({voided.length} voided)</span>}
+            {bills.length} bill{bills.length !== 1 ? "s" : ""}
           </h2>
         </div>
         {loading ? <div className="text-center text-[#8A7D71] py-10">Loading...</div>
@@ -138,13 +133,13 @@ export default function DBilling() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-amber-900/10">
-                  {["Bill #", "Time", "Customer", "Items", "Payment", "Total", "Status", ""].map((h) => (
+                  {["Bill #", "Time", "Customer", "Items", "Payment", "Total", ""].map((h) => (
                     <th key={h} className="text-left text-xs text-[#8A7D71] uppercase tracking-wider px-5 py-3 font-medium">{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
                   {bills.map((b) => (
-                    <tr key={b.id} className={`border-b border-amber-900/5 hover:bg-[#8B5A2B]/5 ${b.is_voided ? "opacity-50" : ""}`}
+                    <tr key={b.id} className="border-b border-amber-900/5 hover:bg-[#8B5A2B]/5"
                       data-testid={`bill-row-${b.id}`}>
                       <td className="px-5 py-3 font-mono text-xs font-semibold text-[#2C241B]">{b.bill_number}</td>
                       <td className="px-5 py-3 text-[#8A7D71]">{fmt(b.created_at)}</td>
@@ -156,11 +151,6 @@ export default function DBilling() {
                         </span>
                       </td>
                       <td className="px-5 py-3 font-bold text-[#8B5A2B]">₹{b.total?.toFixed(2)}</td>
-                      <td className="px-5 py-3">
-                        {b.is_voided
-                          ? <span className="inline-flex px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">Voided</span>
-                          : <span className="inline-flex px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">Active</span>}
-                      </td>
                       <td className="px-5 py-3">
                         <button onClick={() => setShowBill(b)} className="text-[#8A7D71] hover:text-[#5C4F43]" data-testid={`view-bill-${b.id}`}>
                           <Eye size={14} />
@@ -213,12 +203,6 @@ export default function DBilling() {
                     </span>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {showBill.is_voided && (
-              <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-2 text-xs text-red-700">
-                <strong>Voided</strong> {showBill.voided_at && `at ${new Date(showBill.voided_at).toLocaleString("en-IN")}`} — inventory restored.
               </div>
             )}
           </div>

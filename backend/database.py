@@ -11,7 +11,7 @@ def get_db():
 
 async def init_db():
     global _client, _db
-    _client = AsyncIOMotorClient(os.environ["MONGO_URL"])
+    _client = AsyncIOMotorClient(os.environ["MONGO_URL"], serverSelectionTimeoutMS=10000)
     _db = _client[os.environ["DB_NAME"]]
     return _db
 

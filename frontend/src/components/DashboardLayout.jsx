@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { LayoutDashboard, Users, TrendingUp, ShoppingCart, Package, Receipt, Landmark, Settings, LogOut, Menu, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, ShoppingCart, Package, Receipt, Landmark, Settings, LogOut, Menu, ArrowLeft, Banknote } from "lucide-react";
 import { useState } from "react";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { to: "/dashboard/inventory",  label: "Inventory",  icon: Package },
   { to: "/dashboard/billing",    label: "Billing",    icon: Receipt },
   { to: "/dashboard/banking",    label: "Banking",    icon: Landmark },
+  { to: "/dashboard/misc-payments", label: "Misc Payments", icon: Banknote },
   { to: "/dashboard/settings",   label: "Settings",   icon: Settings },
 ];
 

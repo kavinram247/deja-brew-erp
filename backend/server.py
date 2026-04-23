@@ -21,6 +21,7 @@ from routes.recipes_router import router as recipes_router
 from routes.online_sales_router import router as online_sales_router
 from routes.routines_router import router as routines_router
 from routes.banking_router import router as banking_router
+from routes.misc_payments_router import router as misc_payments_router
 
 app = FastAPI(title="Deja Brew ERP", redirect_slashes=False)
 
@@ -59,6 +60,7 @@ app.include_router(recipes_router, prefix="/api/recipes", tags=["recipes"])
 app.include_router(online_sales_router, prefix="/api/online-sales", tags=["online-sales"])
 app.include_router(routines_router, prefix="/api/routines", tags=["routines"])
 app.include_router(banking_router, prefix="/api/banking", tags=["banking"])
+app.include_router(misc_payments_router, prefix="/api/misc-payments", tags=["misc-payments"])
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -109,8 +111,8 @@ async def startup_event():
             {"$set": {"password_hash": hash_password(admin_password)}},
         )
 
-    os.makedirs("/app/memory", exist_ok=True)
-    with open("/app/memory/test_credentials.md", "w") as f:
+    os.makedirs("/tmp/memory", exist_ok=True)
+    with open("/tmp/memory/test_credentials.md", "w") as f:
         f.write(f"""# Deja Brew ERP v2 - Test Credentials
 
 ## Owner Account

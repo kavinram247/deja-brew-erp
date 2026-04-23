@@ -16,7 +16,7 @@ class InventoryItemCreate(BaseModel):
     current_stock: float
     unit: str
     min_quantity: float
-    cost_per_unit: float
+    cost_per_unit: float = 0.0
 
 
 class StockAdjust(BaseModel):

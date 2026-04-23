@@ -14,10 +14,10 @@ import OnlineSales    from "./pages/entry/OnlineSales";
 import Purchases      from "./pages/entry/Purchases";
 import EntryInventory from "./pages/entry/Inventory";
 import EntryBilling   from "./pages/entry/Billing";
-import EntryBills     from "./pages/entry/Bills";
 import Routines       from "./pages/entry/Routines";
 import EntryMenu      from "./pages/entry/MenuPage";
 import EntryBanking   from "./pages/entry/Banking";
+import MiscPayments   from "./pages/entry/MiscPayments";
 
 // Dashboard pages
 import Overview     from "./pages/dashboard/Overview";
@@ -27,6 +27,7 @@ import DPurchases   from "./pages/dashboard/DPurchases";
 import DInventory   from "./pages/dashboard/DInventory";
 import DBilling     from "./pages/dashboard/DBilling";
 import Banking      from "./pages/dashboard/Banking";
+import DMiscPayments from "./pages/dashboard/DMiscPayments";
 import Settings     from "./pages/dashboard/Settings";
 import { Coffee } from "lucide-react";
 
@@ -69,10 +70,10 @@ function App() {
             <Route path="purchases" element={<Purchases />} />
             <Route path="inventory" element={<EntryInventory />} />
             <Route path="billing"   element={<EntryBilling />} />
-            <Route path="bills"      element={<EntryBills />} />
             <Route path="routines"  element={<Routines />} />
             <Route path="menu"      element={<EntryMenu />} />
             <Route path="banking"   element={<EntryBanking />} />
+            <Route path="misc-payments" element={<MiscPayments />} />
           </Route>
 
           {/* Dashboard — owner only */}
@@ -85,6 +86,7 @@ function App() {
             <Route path="inventory" element={<DInventory />} />
             <Route path="billing"   element={<DBilling />} />
             <Route path="banking"   element={<Banking />} />
+            <Route path="misc-payments" element={<DMiscPayments />} />
             <Route path="settings"  element={<Settings />} />
           </Route>
 

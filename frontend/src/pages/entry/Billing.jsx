@@ -18,6 +18,10 @@ export default function Billing() {
   const [submitting, setSubmitting] = useState(false);
   const [lastBill, setLastBill] = useState(null);
 
+  // Inline walk-in logging
+  const [logWalkin, setLogWalkin] = useState(false);
+  const [walkinGuests, setWalkinGuests] = useState(1);
+
   useEffect(() => {
     api.get("/menu?active_only=true").then((r) => setMenuItems(r.data)).catch(() => toast.error("Failed to load menu"));
   }, []);
@@ -73,8 +77,19 @@ export default function Billing() {
         cash_amount: cash, upi_amount: upi,
       });
       setLastBill(data);
+      // Optionally log walk-in silently
+      if (logWalkin) {
+        try {
+          await api.post("/walkins", {
+            num_guests: parseInt(walkinGuests) || 1,
+            payment_mode: paymentMode === "cash+upi" ? "split" : paymentMode,
+            notes: `Auto-logged with bill ${data.bill_number}`,
+          });
+        } catch (_) { /* non-blocking */ }
+      }
       setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
-      toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}`);
+      setLogWalkin(false); setWalkinGuests(1);
+      toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
     } catch (err) { toast.error(err.response?.data?.detail || "Failed"); }
     finally { setSubmitting(false); }
   };
@@ -133,6 +148,24 @@ export default function Billing() {
               <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+91 ..."
                 className="w-full mt-1 rounded-lg border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
                 data-testid="billing-customer-phone" />
+            </div>
+            {/* Inline walk-in logging */}
+            <div className="pt-1 border-t border-amber-900/15">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={logWalkin} onChange={(e) => setLogWalkin(e.target.checked)}
+                  className="rounded" data-testid="billing-log-walkin-toggle" />
+                <span className="text-xs font-medium text-[#5C4F43]">Also log as walk-in</span>
+              </label>
+              {logWalkin && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-xs text-[#8A7D71]">Guests</label>
+                  <input type="number" min="1" value={walkinGuests}
+                    onChange={(e) => setWalkinGuests(e.target.value)}
+                    className="w-16 rounded-lg border border-amber-900/20 bg-white px-2 py-1 text-sm focus:outline-none focus:border-[#8B5A2B] text-center"
+                    data-testid="billing-walkin-guests" />
+                  <span className="text-[10px] text-[#8A7D71]">Posted when bill is submitted</span>
+                </div>
+              )}
             </div>
           </div>
 
