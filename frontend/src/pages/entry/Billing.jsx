@@ -93,8 +93,11 @@ export default function Billing() {
       setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
       setLogWalkin(false); setWalkinGuests(1);
       toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
-      if (printAfter === "bill") printBill(data);
-      else if (printAfter === "kot") printKot(data);
+      if (printAfter === "bill") {
+        // Print bill, then KOT shortly after so two print dialogs queue cleanly
+        printBill(data);
+        setTimeout(() => printKot(data), 700);
+      }
     } catch (err) { toast.error(err.response?.data?.detail || "Failed"); }
     finally { setSubmitting(false); }
   };
@@ -134,19 +137,18 @@ export default function Billing() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1 pb-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 overflow-y-auto flex-1 pb-2">
             {filtered.length === 0 ? (
               <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">No items — add from Menu</div>
             ) : filtered.map((item) => {
               const inCart = cart.find((c) => c.id === item.id);
               return (
                 <button key={item.id} onClick={() => addToCart(item)}
-                  className={`bg-white rounded-2xl border p-4 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_2px_8px_rgba(44,36,27,0.04)] relative ${inCart ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
+                  className={`bg-white rounded-xl border p-2 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_2px_6px_rgba(44,36,27,0.04)] relative ${inCart ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
                   data-testid={`menu-item-${item.id}`}>
-                  {inCart && <span className="absolute top-2 right-2 bg-[#8B5A2B] text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{inCart.qty}</span>}
-                  <p className="font-semibold text-[#2C241B] text-sm">{item.name}</p>
-                  <p className="text-[10px] text-[#8A7D71] mt-0.5">{item.category}</p>
-                  <p className="text-[#8B5A2B] font-bold mt-2">₹{item.price}</p>
+                  {inCart && <span className="absolute top-1 right-1 bg-[#8B5A2B] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{inCart.qty}</span>}
+                  <p className="font-semibold text-[#2C241B] text-xs leading-tight line-clamp-2">{item.name}</p>
+                  <p className="text-[#8B5A2B] font-bold text-xs mt-1">₹{item.price}</p>
                 </button>
               );
             })}
@@ -219,80 +221,79 @@ export default function Billing() {
               ))}
           </div>
 
-          {/* Bill summary + payment */}
-          <div className="p-4 border-t border-amber-900/10 space-y-2">
-            {/* Overall discount */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-[#8A7D71] w-20 shrink-0">Overall Disc (₹)</label>
-              <input type="number" step="0.01" value={overallDisc} onChange={(e) => setOverallDisc(e.target.value)} placeholder="0"
-                className="flex-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
-                data-testid="overall-discount-input" />
+          {/* Bill summary + payment + actions — scrollable middle, fixed footer */}
+          <div className="border-t border-amber-900/10 flex flex-col min-h-0">
+            <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: "45vh" }}>
+              {/* Overall discount */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-[#8A7D71] w-20 shrink-0">Overall Disc (₹)</label>
+                <input type="number" step="0.01" value={overallDisc} onChange={(e) => setOverallDisc(e.target.value)} placeholder="0"
+                  className="flex-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                  data-testid="overall-discount-input" />
+              </div>
+
+              {/* Tax breakdown */}
+              {cart.length > 0 && (
+                <div className="bg-[#F6F3EC] rounded-xl p-2.5 space-y-0.5 text-xs">
+                  <div className="flex justify-between text-[#5C4F43]"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
+                  {disc > 0 && <div className="flex justify-between text-[#B84B4B]"><span>Discount</span><span>−₹{disc.toFixed(2)}</span></div>}
+                  <div className="flex justify-between text-[#5C4F43]"><span>Taxable</span><span>₹{taxable.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-[#5C4F43]"><span>CGST (2.5%)</span><span>₹{cgst.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-[#5C4F43]"><span>SGST (2.5%)</span><span>₹{sgst.toFixed(2)}</span></div>
+                </div>
+              )}
+
+              {/* Payment mode */}
+              <div>
+                <p className="text-xs text-[#8A7D71] font-medium mb-1">Payment</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {["cash", "upi", "cash+upi"].map((m) => (
+                    <button key={m} onClick={() => setPaymentMode(m)}
+                      className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${paymentMode === m ? "bg-[#8B5A2B] text-white" : "bg-[#F6F3EC] text-[#5C4F43] hover:bg-[#8B5A2B]/10"}`}
+                      data-testid={`pay-mode-${m}`}>
+                      {m === "cash+upi" ? "Split" : m.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {paymentMode === "cash+upi" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-[#8A7D71]">Cash (₹)</label>
+                    <input type="number" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)} placeholder="0"
+                      className="w-full mt-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]" data-testid="cash-input" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#8A7D71]">UPI (₹)</label>
+                    <input type="number" value={upiAmount} onChange={(e) => setUpiAmount(e.target.value)} placeholder="0"
+                      className="w-full mt-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]" data-testid="upi-input" />
+                  </div>
+                  {cashAmount && upiAmount && !isPaymentValid() && (
+                    <p className="col-span-2 text-xs text-red-500">Must equal ₹{total.toFixed(2)}</p>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Tax breakdown */}
-            {cart.length > 0 && (
-              <div className="bg-[#F6F3EC] rounded-xl p-3 space-y-1 text-xs">
-                <div className="flex justify-between text-[#5C4F43]"><span>Subtotal</span><span>₹{subtotal.toFixed(2)}</span></div>
-                {disc > 0 && <div className="flex justify-between text-[#B84B4B]"><span>Discount</span><span>−₹{disc.toFixed(2)}</span></div>}
-                <div className="flex justify-between text-[#5C4F43]"><span>Taxable</span><span>₹{taxable.toFixed(2)}</span></div>
-                <div className="flex justify-between text-[#5C4F43]"><span>CGST (2.5%)</span><span>₹{cgst.toFixed(2)}</span></div>
-                <div className="flex justify-between text-[#5C4F43]"><span>SGST (2.5%)</span><span>₹{sgst.toFixed(2)}</span></div>
+            {/* Sticky footer: total + submit buttons */}
+            <div className="p-3 border-t border-amber-900/10 bg-white space-y-2 shrink-0">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[#2C241B] text-sm">Total</span>
+                <span className="text-xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total.toFixed(2)}</span>
               </div>
-            )}
-
-            {/* Payment mode */}
-            <div>
-              <p className="text-xs text-[#8A7D71] font-medium mb-1.5">Payment</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {["cash", "upi", "cash+upi"].map((m) => (
-                  <button key={m} onClick={() => setPaymentMode(m)}
-                    className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${paymentMode === m ? "bg-[#8B5A2B] text-white" : "bg-[#F6F3EC] text-[#5C4F43] hover:bg-[#8B5A2B]/10"}`}
-                    data-testid={`pay-mode-${m}`}>
-                    {m === "cash+upi" ? "Split" : m.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {paymentMode === "cash+upi" && (
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-[#8A7D71]">Cash (₹)</label>
-                  <input type="number" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)} placeholder="0"
-                    className="w-full mt-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]" data-testid="cash-input" />
-                </div>
-                <div>
-                  <label className="text-xs text-[#8A7D71]">UPI (₹)</label>
-                  <input type="number" value={upiAmount} onChange={(e) => setUpiAmount(e.target.value)} placeholder="0"
-                    className="w-full mt-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]" data-testid="upi-input" />
-                </div>
-                {cashAmount && upiAmount && !isPaymentValid() && (
-                  <p className="col-span-2 text-xs text-red-500">Must equal ₹{total.toFixed(2)}</p>
-                )}
+                <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
+                  className="bg-[#8B5A2B] text-white rounded-xl py-2.5 font-bold text-xs hover:bg-[#704822] active:scale-[0.98] transition-all disabled:opacity-50"
+                  data-testid="submit-bill-btn">
+                  {submitting ? "..." : "Submit Bill"}
+                </button>
+                <button onClick={() => handleSubmit("bill")} disabled={submitting || cart.length === 0}
+                  className="flex items-center justify-center gap-1.5 bg-[#3E5C46] text-white rounded-xl py-2.5 text-xs font-bold hover:bg-[#2F4735] active:scale-[0.98] transition-all disabled:opacity-50"
+                  data-testid="submit-print-bill-btn">
+                  <Printer size={13} /> Submit + Print
+                </button>
               </div>
-            )}
-
-            <div className="flex justify-between items-center py-1 border-t border-amber-900/10">
-              <span className="font-bold text-[#2C241B]">Total</span>
-              <span className="text-2xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total.toFixed(2)}</span>
-            </div>
-
-            <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
-              className="w-full bg-[#8B5A2B] text-white rounded-xl py-3 font-bold text-sm hover:bg-[#704822] active:scale-[0.98] transition-all disabled:opacity-50"
-              data-testid="submit-bill-btn">
-              {submitting ? "Processing..." : `Submit Bill  ₹${total.toFixed(2)}`}
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => handleSubmit("bill")} disabled={submitting || cart.length === 0}
-                className="flex items-center justify-center gap-1.5 bg-white border border-[#8B5A2B] text-[#8B5A2B] rounded-xl py-2 text-xs font-semibold hover:bg-[#8B5A2B]/5 disabled:opacity-50"
-                data-testid="submit-print-bill-btn">
-                <Printer size={12} /> Submit + Print Bill
-              </button>
-              <button onClick={() => handleSubmit("kot")} disabled={submitting || cart.length === 0}
-                className="flex items-center justify-center gap-1.5 bg-white border border-[#3E5C46] text-[#3E5C46] rounded-xl py-2 text-xs font-semibold hover:bg-[#3E5C46]/5 disabled:opacity-50"
-                data-testid="submit-print-kot-btn">
-                <ChefHat size={12} /> Submit + KOT
-              </button>
             </div>
           </div>
         </div>
