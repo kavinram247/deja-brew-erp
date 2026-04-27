@@ -58,8 +58,13 @@ export const PrintableReceipt = forwardRef(({ bill, kind = "bill" }, ref) => {
   }
 
   // Customer bill
+  const roundOff = typeof bill.round_off === "number" ? bill.round_off : 0;
+  const total = bill.total || 0;
   return (
     <div ref={ref} className="print-receipt" data-receipt-kind="bill">
+      <div className="center">
+        <img src="/deja-brew-logo.png" alt="Deja Brew" className="receipt-logo" />
+      </div>
       <div className="center bold lg">{CAFE.name}</div>
       <div className="center sm">{CAFE.address}</div>
       <div className="center sm">Phone: {CAFE.phone}</div>
@@ -87,17 +92,20 @@ export const PrintableReceipt = forwardRef(({ bill, kind = "bill" }, ref) => {
         </div>
       ))}
       <div className="divider" />
-      <div className="row"><span>Sub Total</span><span>RS {(bill.subtotal || 0).toFixed(3)}</span></div>
+      <div className="row"><span>Sub Total</span><span>RS {(bill.subtotal || 0).toFixed(2)}</span></div>
       {bill.overall_discount > 0 && (
-        <div className="row"><span>Discount</span><span>- RS {(bill.overall_discount || 0).toFixed(3)}</span></div>
+        <div className="row"><span>Discount</span><span>- RS {(bill.overall_discount || 0).toFixed(2)}</span></div>
       )}
-      <div className="row"><span>CGST: 2.50%</span><span>{(bill.cgst || 0).toFixed(3)}</span></div>
-      <div className="row"><span>SGST: 2.50%</span><span>{(bill.sgst || 0).toFixed(3)}</span></div>
-      <div className="row"><span>Round Off</span><span>0.000</span></div>
+      <div className="row"><span>CGST: 2.50%</span><span>{(bill.cgst || 0).toFixed(2)}</span></div>
+      <div className="row"><span>SGST: 2.50%</span><span>{(bill.sgst || 0).toFixed(2)}</span></div>
+      {bill.service_charge_enabled && (
+        <div className="row"><span>Service Charge 5%</span><span>{(bill.service_charge || 0).toFixed(2)}</span></div>
+      )}
+      <div className="row"><span>Round Off</span><span>{roundOff >= 0 ? "+" : "-"}{Math.abs(roundOff).toFixed(2)}</span></div>
       <div className="divider" />
-      <div className="row bold lg"><span>Total</span><span>RS {(bill.total || 0).toFixed(3)}</span></div>
+      <div className="row bold lg"><span>Total</span><span>RS {Math.round(total)}</span></div>
       <div className="divider" />
-      <div className="row sm"><span>Settlement Type:</span><span>{(bill.payment_mode === "cash+upi" ? "SPLIT" : (bill.payment_mode || "").toUpperCase())}-{(bill.total || 0).toFixed(1)}</span></div>
+      <div className="row sm"><span>Settlement Type:</span><span>{(bill.payment_mode === "cash+upi" ? "SPLIT" : (bill.payment_mode || "").toUpperCase())}-{Math.round(total)}</span></div>
       {bill.customer_phone && <div className="row sm"><span>Cust mobile:</span><span>{bill.customer_phone}</span></div>}
       <div className="row sm"><span>Delivery Time:</span><span>null</span></div>
       <div className="divider" />

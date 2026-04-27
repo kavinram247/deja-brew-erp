@@ -6,6 +6,7 @@ import ThemeDatePicker from "../../components/ThemeDatePicker";
 import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
+const SERVICE_RATE = 0.05;
 
 function fmtDateTime(iso) {
   if (!iso) return "";
@@ -163,6 +164,12 @@ function ViewModal({ bill, onClose }) {
           {bill.overall_discount > 0 && <div className="flex justify-between text-[#B84B4B]"><span>Discount</span><span>−₹{bill.overall_discount.toFixed(2)}</span></div>}
           <div className="flex justify-between"><span>CGST (2.5%)</span><span>₹{(bill.cgst || 0).toFixed(2)}</span></div>
           <div className="flex justify-between"><span>SGST (2.5%)</span><span>₹{(bill.sgst || 0).toFixed(2)}</span></div>
+          {bill.service_charge_enabled && (
+            <div className="flex justify-between"><span>Service Charge (5%)</span><span>₹{(bill.service_charge || 0).toFixed(2)}</span></div>
+          )}
+          {typeof bill.round_off === "number" && Math.abs(bill.round_off) > 0.001 && (
+            <div className="flex justify-between text-[#8A7D71]"><span>Round Off</span><span>{bill.round_off >= 0 ? "+" : "−"}₹{Math.abs(bill.round_off).toFixed(2)}</span></div>
+          )}
           <div className="flex justify-between font-bold text-[#8B5A2B] pt-1 border-t border-amber-900/10"><span>Total</span><span>₹{(bill.total || 0).toFixed(2)}</span></div>
         </div>
         {(bill.inventory_deductions || []).length > 0 && (
@@ -196,6 +203,7 @@ function EditModal({ bill, onClose, onSaved }) {
   const [paymentMode, setPaymentMode] = useState(bill.payment_mode || "cash");
   const [cashAmount, setCashAmount] = useState(bill.cash_amount || 0);
   const [upiAmount, setUpiAmount] = useState(bill.upi_amount || 0);
+  const [serviceCharge, setServiceCharge] = useState(!!bill.service_charge_enabled);
   const [saving, setSaving] = useState(false);
 
   const lines = items.map((it) => {
@@ -208,7 +216,10 @@ function EditModal({ bill, onClose, onSaved }) {
   const taxable = Math.max(0, subtotal - disc);
   const cgst = taxable * TAX;
   const sgst = taxable * TAX;
-  const total = taxable + cgst + sgst;
+  const service = serviceCharge ? taxable * SERVICE_RATE : 0;
+  const rawTotal = taxable + cgst + sgst + service;
+  const total = Math.round(rawTotal);
+  const roundOff = total - rawTotal;
 
   const adj = (idx, field, val) => setItems((p) => {
     const list = [...p];
@@ -232,6 +243,7 @@ function EditModal({ bill, onClose, onSaved }) {
         overall_discount: disc,
         payment_mode: paymentMode,
         cash_amount: cash, upi_amount: upi,
+        service_charge_enabled: serviceCharge,
       });
       onSaved(data);
       toast.success(`${data.bill_number} updated · inventory rebalanced`);
@@ -323,7 +335,16 @@ function EditModal({ bill, onClose, onSaved }) {
           <div className="flex justify-between"><span>Taxable</span><span>₹{taxable.toFixed(2)}</span></div>
           <div className="flex justify-between"><span>CGST (2.5%)</span><span>₹{cgst.toFixed(2)}</span></div>
           <div className="flex justify-between"><span>SGST (2.5%)</span><span>₹{sgst.toFixed(2)}</span></div>
-          <div className="flex justify-between font-bold text-[#8B5A2B] pt-1 border-t border-amber-900/10"><span>Total</span><span>₹{total.toFixed(2)}</span></div>
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={serviceCharge} onChange={(e) => setServiceCharge(e.target.checked)}
+                className="rounded" data-testid="edit-service-charge-toggle" />
+              <span className="text-[#5C4F43]">Service Charge (5%)</span>
+            </label>
+            <span>{serviceCharge ? `₹${service.toFixed(2)}` : "—"}</span>
+          </div>
+          <div className="flex justify-between text-[#8A7D71]"><span>Round Off</span><span>{roundOff >= 0 ? "+" : "−"}₹{Math.abs(roundOff).toFixed(2)}</span></div>
+          <div className="flex justify-between font-bold text-[#8B5A2B] pt-1 border-t border-amber-900/10"><span>Total</span><span>₹{total}</span></div>
         </div>
 
         <div className="mb-3">

@@ -36,6 +36,10 @@ Build a complete ERP system for cafe "Deja Brew" with:
   - CSV export buttons on Overview, Sales, and Billing dashboards (`utils/csv.js`).
 - V4 Delta (DONE, E2E tested 2026-02-21):
   - Branded PDF export on Overview / Sales / Billing (`utils/pdf.js`) using jsPDF + autotable — coffee-brown header, summary card, striped table, page numbers.
+- V5 Delta (DONE 2026-04-27):
+  - Optional 5% Service Charge toggle in Billing entry — editable later from Bills edit modal (uncheck → save → reprint).
+  - Bills now round off to the nearest whole rupee — `round_off` and rounded `total` stored on bill.
+  - Cafe logo (`/deja-brew-logo.png`) added at the top of thermal print receipts (28mm wide, centered).
 
 ## Test Status
 - `/app/test_reports/iteration_2.json`: Backend 100% (35/35 pytest), Frontend 100% (Playwright RBAC + all pages).
@@ -64,7 +68,7 @@ Build a complete ERP system for cafe "Deja Brew" with:
 - `menu_items` — name, category, price, description, active
 - `recipes` — menu_item_id, menu_item_name, ingredients[]
 - `inventory` — name, category, section (Barista/Kitchen/Other), current_stock, unit, min_quantity, cost_per_unit
-- `bills` — bill_number, customer_name, items[], subtotal, cgst, sgst, total, payment_mode, cash/upi_amount, inventory_deductions[], is_voided
+- `bills` — bill_number, customer_name, items[], subtotal, cgst, sgst, service_charge_enabled, service_charge, round_off, total, payment_mode, cash/upi_amount, inventory_deductions[], is_voided
 - `walkins` — num_guests, payment_mode, notes, date, time
 - `online_sales` — platform (swiggy/zomato/district), gross_sales, net_sales, cash/upi/card_amount
 - `float_days` — opening_balance (₹5200), expenses[], closing_balance

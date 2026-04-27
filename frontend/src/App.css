@@ -55,6 +55,13 @@
   font-weight: 700;
   font-size: 10px;
 }
+.print-receipt .receipt-logo {
+  display: block;
+  margin: 0 auto 2px;
+  width: 28mm;
+  max-width: 60mm;
+  height: auto;
+}
 
 @media print {
   @page { margin: 0; size: 80mm auto; }

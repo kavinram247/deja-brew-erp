@@ -5,6 +5,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat, Search, X } from "
 import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
+const SERVICE_RATE = 0.05;
 
 export default function Billing() {
   const [menuItems, setMenuItems] = useState([]);
@@ -23,6 +24,7 @@ export default function Billing() {
   // Inline walk-in logging
   const [logWalkin, setLogWalkin] = useState(false);
   const [walkinGuests, setWalkinGuests] = useState(1);
+  const [serviceCharge, setServiceCharge] = useState(false);
 
   const { printBill, printKot, PrintHost } = usePrint();
 
@@ -61,7 +63,10 @@ export default function Billing() {
   const taxable = Math.max(0, subtotal - disc);
   const cgst = taxable * TAX;
   const sgst = taxable * TAX;
-  const total = taxable + cgst + sgst;
+  const service = serviceCharge ? taxable * SERVICE_RATE : 0;
+  const rawTotal = taxable + cgst + sgst + service;
+  const total = Math.round(rawTotal);
+  const roundOff = total - rawTotal;
 
   const isPaymentValid = () => {
     if (paymentMode !== "cash+upi") return true;
@@ -83,6 +88,7 @@ export default function Billing() {
         overall_discount: disc,
         payment_mode: paymentMode,
         cash_amount: cash, upi_amount: upi,
+        service_charge_enabled: serviceCharge,
       });
       setLastBill(data);
       // Optionally log walk-in silently
@@ -96,7 +102,7 @@ export default function Billing() {
         } catch (_) { /* non-blocking */ }
       }
       setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
-      setLogWalkin(false); setWalkinGuests(1);
+      setLogWalkin(false); setWalkinGuests(1); setServiceCharge(false);
       toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
       if (printAfter === "bill") {
         // Print bill, then KOT shortly after so two print dialogs queue cleanly
@@ -262,8 +268,19 @@ export default function Billing() {
                   <div className="flex justify-between text-[#5C4F43]"><span>Taxable</span><span>₹{taxable.toFixed(2)}</span></div>
                   <div className="flex justify-between text-[#5C4F43]"><span>CGST (2.5%)</span><span>₹{cgst.toFixed(2)}</span></div>
                   <div className="flex justify-between text-[#5C4F43]"><span>SGST (2.5%)</span><span>₹{sgst.toFixed(2)}</span></div>
+                  {serviceCharge && (
+                    <div className="flex justify-between text-[#5C4F43]"><span>Service Charge (5%)</span><span>₹{service.toFixed(2)}</span></div>
+                  )}
+                  <div className="flex justify-between text-[#8A7D71]"><span>Round Off</span><span>{roundOff >= 0 ? "+" : "−"}₹{Math.abs(roundOff).toFixed(2)}</span></div>
                 </div>
               )}
+
+              {/* Service charge toggle */}
+              <label className="flex items-center gap-2 cursor-pointer px-1">
+                <input type="checkbox" checked={serviceCharge} onChange={(e) => setServiceCharge(e.target.checked)}
+                  className="rounded" data-testid="service-charge-toggle" />
+                <span className="text-xs font-medium text-[#5C4F43]">Add 5% Service Charge</span>
+              </label>
 
               {/* Payment mode */}
               <div>
@@ -302,7 +319,7 @@ export default function Billing() {
             <div className="p-3 border-t border-amber-900/10 bg-white space-y-2 shrink-0">
               <div className="flex justify-between items-center">
                 <span className="font-bold text-[#2C241B] text-sm">Total</span>
-                <span className="text-xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total}</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
