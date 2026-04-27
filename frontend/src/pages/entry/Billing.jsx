@@ -157,7 +157,7 @@ export default function Billing() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 overflow-y-auto flex-1 pb-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 auto-rows-min content-start gap-1.5 overflow-y-auto flex-1 pb-2">
             {filtered.length === 0 ? (
               <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">
                 {q ? `No items match "${search}"` : "No items — add from Menu"}
