@@ -63,7 +63,7 @@ export default function Billing() {
     return Math.abs((parseFloat(cashAmount) || 0) + (parseFloat(upiAmount) || 0) - total) < 0.5;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (printAfter = null) => {
     if (!customerName.trim()) { toast.error("Enter customer name"); return; }
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
     if (!isPaymentValid()) { toast.error(`Cash + UPI must equal ₹${total.toFixed(2)}`); return; }
@@ -93,6 +93,8 @@ export default function Billing() {
       setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
       setLogWalkin(false); setWalkinGuests(1);
       toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
+      if (printAfter === "bill") printBill(data);
+      else if (printAfter === "kot") printKot(data);
     } catch (err) { toast.error(err.response?.data?.detail || "Failed"); }
     finally { setSubmitting(false); }
   };
@@ -275,11 +277,23 @@ export default function Billing() {
               <span className="text-2xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total.toFixed(2)}</span>
             </div>
 
-            <button onClick={handleSubmit} disabled={submitting || cart.length === 0}
+            <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
               className="w-full bg-[#8B5A2B] text-white rounded-xl py-3 font-bold text-sm hover:bg-[#704822] active:scale-[0.98] transition-all disabled:opacity-50"
               data-testid="submit-bill-btn">
               {submitting ? "Processing..." : `Submit Bill  ₹${total.toFixed(2)}`}
             </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleSubmit("bill")} disabled={submitting || cart.length === 0}
+                className="flex items-center justify-center gap-1.5 bg-white border border-[#8B5A2B] text-[#8B5A2B] rounded-xl py-2 text-xs font-semibold hover:bg-[#8B5A2B]/5 disabled:opacity-50"
+                data-testid="submit-print-bill-btn">
+                <Printer size={12} /> Submit + Print Bill
+              </button>
+              <button onClick={() => handleSubmit("kot")} disabled={submitting || cart.length === 0}
+                className="flex items-center justify-center gap-1.5 bg-white border border-[#3E5C46] text-[#3E5C46] rounded-xl py-2 text-xs font-semibold hover:bg-[#3E5C46]/5 disabled:opacity-50"
+                data-testid="submit-print-kot-btn">
+                <ChefHat size={12} /> Submit + KOT
+              </button>
+            </div>
           </div>
         </div>
       </div>

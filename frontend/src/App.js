@@ -19,7 +19,6 @@ import Routines       from "./pages/entry/Routines";
 import EntryMenu      from "./pages/entry/MenuPage";
 import EntryBanking   from "./pages/entry/Banking";
 import MiscPayments   from "./pages/entry/MiscPayments";
-
 // Dashboard pages
 import Overview     from "./pages/dashboard/Overview";
 import DWalkins     from "./pages/dashboard/DWalkins";
@@ -28,7 +27,6 @@ import DPurchases   from "./pages/dashboard/DPurchases";
 import DInventory   from "./pages/dashboard/DInventory";
 import DBilling     from "./pages/dashboard/DBilling";
 import Banking      from "./pages/dashboard/Banking";
-import DMiscPayments from "./pages/dashboard/DMiscPayments";
 import Settings     from "./pages/dashboard/Settings";
 import { Coffee } from "lucide-react";
 
@@ -88,7 +86,7 @@ function App() {
             <Route path="inventory" element={<DInventory />} />
             <Route path="billing"   element={<DBilling />} />
             <Route path="banking"   element={<Banking />} />
-            <Route path="misc-payments" element={<DMiscPayments />} />
+            <Route path="misc-payments" element={<MiscPayments />} />
             <Route path="settings"  element={<Settings />} />
           </Route>
 

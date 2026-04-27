@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Wallet, Filter, Download, FileText } from "lucide-react";
+import { Wallet, Filter, Download, FileText, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import DateRangeToolbar, { computeRange } from "../../components/DateRangeToolbar";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
@@ -26,6 +26,9 @@ export default function DPurchases() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState("All");
+  const [expanded, setExpanded] = useState({});
+
+  const toggleDay = (date) => setExpanded((p) => ({ ...p, [date]: !p[date] }));
 
   useEffect(() => {
     (async () => {
@@ -229,33 +232,77 @@ export default function DPurchases() {
             )}
           </div>
 
-          {/* Daily summary */}
+          {/* Daily summary with expandable expense items */}
           <div className="mt-6 bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
-            <div className="px-5 py-4 border-b border-amber-900/10">
-              <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Daily Float</h2>
+            <div className="px-5 py-4 border-b border-amber-900/10 flex items-center justify-between">
+              <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Daily Float History</h2>
+              <span className="text-xs text-[#8A7D71]">Click a date to see items</span>
             </div>
             {filtered.length === 0 ? (
               <div className="text-center py-8 text-sm text-[#8A7D71]">No float data in range</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-amber-900/10">
-                    {["Date", "Opening", "Closing", "Spent", "#Expenses"].map((h) => (
-                      <th key={h} className="text-left text-xs text-[#8A7D71] uppercase tracking-wider px-5 py-3 font-medium">{h}</th>
-                    ))}
-                  </tr></thead>
-                  <tbody>
-                    {filtered.map((h) => (
-                      <tr key={h.id} className="border-b border-amber-900/5 hover:bg-[#8B5A2B]/5" data-testid={`dp-row-${h.date}`}>
-                        <td className="px-5 py-3 font-medium text-[#2C241B]">{h.date}</td>
-                        <td className="px-5 py-3 text-[#5C4F43]">₹{h.opening_balance}</td>
-                        <td className={`px-5 py-3 font-semibold ${h.closing_balance < 1000 ? "text-[#B84B4B]" : "text-[#3E5C46]"}`}>₹{h.closing_balance}</td>
-                        <td className="px-5 py-3 text-[#B84B4B] font-semibold">−₹{(h.opening_balance - h.closing_balance).toFixed(0)}</td>
-                        <td className="px-5 py-3 text-[#8A7D71]">{h.expenses?.length || 0}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="divide-y divide-amber-900/5">
+                {filtered.map((h) => {
+                  const spent = h.opening_balance - h.closing_balance;
+                  const isOpen = !!expanded[h.date];
+                  const exp = h.expenses || [];
+                  return (
+                    <div key={h.id} data-testid={`dp-row-${h.date}`}>
+                      <button onClick={() => toggleDay(h.date)}
+                        className="w-full grid grid-cols-12 gap-2 items-center px-5 py-3 hover:bg-[#8B5A2B]/5 text-sm text-left"
+                        data-testid={`dp-expand-${h.date}`}>
+                        <div className="col-span-1 text-[#8B5A2B]">
+                          {isOpen ? <ChevronDown size={15} /> : <ChevronRightIcon size={15} />}
+                        </div>
+                        <div className="col-span-3 font-semibold text-[#2C241B]">{h.date}</div>
+                        <div className="col-span-2 text-[#5C4F43]">Open ₹{h.opening_balance}</div>
+                        <div className={`col-span-2 font-semibold ${h.closing_balance < 1000 ? "text-[#B84B4B]" : "text-[#3E5C46]"}`}>Close ₹{h.closing_balance}</div>
+                        <div className="col-span-2 text-[#B84B4B] font-semibold">−₹{spent.toFixed(0)}</div>
+                        <div className="col-span-2 text-right text-xs text-[#8A7D71]">{exp.length} item{exp.length !== 1 ? "s" : ""}</div>
+                      </button>
+                      {isOpen && (
+                        <div className="bg-[#F6F3EC]/60 px-5 py-3 fade-in" data-testid={`dp-items-${h.date}`}>
+                          {exp.length === 0 ? (
+                            <p className="text-xs text-[#8A7D71] italic text-center py-2">No expenses logged this day</p>
+                          ) : (
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-amber-900/10">
+                                  <th className="text-left text-[10px] text-[#8A7D71] uppercase tracking-wider py-1.5 px-2 font-medium">Time</th>
+                                  <th className="text-left text-[10px] text-[#8A7D71] uppercase tracking-wider py-1.5 px-2 font-medium">Description</th>
+                                  <th className="text-left text-[10px] text-[#8A7D71] uppercase tracking-wider py-1.5 px-2 font-medium">Category</th>
+                                  <th className="text-right text-[10px] text-[#8A7D71] uppercase tracking-wider py-1.5 px-2 font-medium">Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {exp.map((e) => {
+                                  const color = CAT_COLORS[e.category] || "#8B5A2B";
+                                  return (
+                                    <tr key={e.id} className="border-b border-amber-900/5 last:border-0" data-testid={`dp-day-item-${e.id}`}>
+                                      <td className="py-1.5 px-2 text-[#8A7D71]">{e.timestamp ? fmtTime(e.timestamp) : "—"}</td>
+                                      <td className="py-1.5 px-2 text-[#2C241B]">{e.description}</td>
+                                      <td className="py-1.5 px-2">
+                                        <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: `${color}15`, color }}>
+                                          {e.category}
+                                        </span>
+                                      </td>
+                                      <td className="py-1.5 px-2 text-right font-semibold text-[#B84B4B]">−₹{e.amount.toLocaleString("en-IN")}</td>
+                                    </tr>
+                                  );
+                                })}
+                                <tr className="font-bold">
+                                  <td colSpan="3" className="py-1.5 px-2 text-[#2C241B]">Day Total</td>
+                                  <td className="py-1.5 px-2 text-right text-[#B84B4B]">−₹{spent.toLocaleString("en-IN")}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          )}
+                          {h.notes && <p className="mt-2 text-xs italic text-[#8A7D71]">"{h.notes}"</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -1,0 +1,46 @@
+{
+  "summary": "Delta v8 testing complete - all 3 additive features verified. (1) Submit + Print Bill / Submit + KOT buttons in /entry/billing trigger window.print correctly; plain Submit Bill does NOT auto-print. (2) Owner /dashboard/misc-payments now correctly renders the same MiscPayments component as /entry/misc-payments with full CRUD. (3) /dashboard/purchases Daily Float History rows are expandable showing per-day expense items. 3/3 backend tests pass, all frontend smoke checks pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_delta_v8.py",
+    "/app/test_reports/pytest/v8_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Billing.jsx handleSubmit: the three buttons (submit-bill-btn, submit-print-bill-btn, submit-print-kot-btn) all share state variable 'submitting' but use disabled checks correctly. However, while submitting, all 3 are disabled together — good UX, no race.",
+    "Billing.jsx: Submit + Print Bill / Submit + KOT have NO icon size variance with cart count badge — minor; works fine.",
+    "DPurchases.jsx: expandable rows use {h.id} key but {h.date} for testid. If a date appears twice in /float/history (shouldn't happen, but possible if backend bug), keys collide silently. Consider using h.date as key OR add server-side uniqueness assertion.",
+    "DPurchases.jsx: spent = h.opening_balance - h.closing_balance computed on client; the 'Day Total' row in expanded panel shows this value which may differ from sum(expenses) if there are off-book adjustments. Currently OK since float router only mutates closing_balance via expense POST, but if a manual adjustment endpoint is added later, the two values will diverge — should sum expenses array instead for the panel total.",
+    "DPurchases.jsx: ChevronRightIcon imported but ChevronDown is also imported and used; minor naming inconsistency. Reads fine.",
+    "App.js: dashboard/misc-payments now uses MiscPayments (the entry component). Component reads `today` constant once at module init — for a long-lived owner SPA session crossing midnight, the ThemeDatePicker max prop and 'Today' label will go stale. Low priority.",
+    "MiscPayments.jsx is reused across both routes — no per-role guarding. Backend RBAC must enforce DELETE permission. Verified backend allows owner DELETE; should also verify employee DELETE via the same endpoint (already tested in v6).",
+    "v7 carry-overs unresolved: Bills.jsx EditModal still missing cash+upi total validation; PUT /bills/{id} still doesn't validate ObjectId format (raises 500 on malformed id)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_delta_v8.py (new)"
+  ],
+  "success_rate": {"backend": "100% (3/3)", "frontend": "100% (all 8 v8 review items verified)"},
+  "test_credentials": "owner@dejabrew.com / BrewOwner2024 (verified)",
+  "seed_data_creation": "Backend test seeded TEST_v8_print bill, TEST_v8_owner misc payment (auto-deleted), TEST_v8_float_* expense entries today (3 categories). UI test created TEST_v8_ui_owner misc (deleted), and 3 TEST_v8_ui_print/_kot/_plain bills (not cleaned, low-noise).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v8 testids: submit-print-bill-btn / submit-print-kot-btn (Billing 2-col grid below submit-bill-btn). DPurchases expandable rows: dp-row-<date> (kept) + dp-expand-<date> button + dp-items-<date> panel + dp-day-item-<expense_id>. Owner misc payments now reuses MiscPayments component with same testids: misc-add-btn, misc-date-picker, misc-amount, misc-source, misc-category, misc-mode-cash|upi|other, misc-save-btn, del-misc-<id>, misc-row-<id>. To assert print-after-submit override window.print before clicking: page.evaluate('() => { window.__printCalls = 0; window.print = () => window.__printCalls++; }'). Then assert .print-receipt[data-receipt-kind=\"bill\"|\"kot\"] exists. Plain submit-bill-btn must keep printCalls === 0.",
+  "verified_flows": {
+    "submit_print_bill": "PASS - POST /bills + window.print() called once + .print-receipt[data-receipt-kind='bill'] rendered + cart cleared",
+    "submit_print_kot": "PASS - POST /bills + window.print() called once + .print-receipt[data-receipt-kind='kot'] rendered",
+    "plain_submit_bill_no_autoprint": "PASS - printCalls remained 0",
+    "billing_validation_empty_customer": "PASS - error toast shown, no API call",
+    "owner_dashboard_misc_payments_crud": "PASS - misc-add-btn / date picker / Add modal / misc-save-btn / del-misc-<id> all functional; POST + DELETE /api/misc-payments work",
+    "dpurchases_expand_collapse": "PASS - clicking dp-expand-<date> reveals dp-items-<date>; clicking again collapses",
+    "dpurchases_multi_expand": "PASS - two date rows expanded simultaneously",
+    "regression_owner_login_role_redirect": "PASS - owner→/dashboard/overview"
+  }
+}
