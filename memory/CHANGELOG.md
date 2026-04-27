@@ -1,5 +1,11 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-25 — Delta v8 (Float drilldown + Owner Misc CRUD + Submit&Print)
+- **Detailed float history by date** — `/dashboard/purchases` Daily Float History rows now expand inline to show that day's expense items (Time / Description / Category / Amount + Day Total).
+- **Owner can manage misc payments** — `/dashboard/misc-payments` now uses the same full CRUD component as `/entry/misc-payments`. Both employee + owner can add/delete misc payments. (Removed the read-only DMiscPayments.jsx.)
+- **Submit + Print buttons** — `/entry/billing` adds two new buttons next to the main Submit Bill: **"Submit + Print Bill"** and **"Submit + KOT"** that submit the bill AND auto-trigger print in one click. Plain Submit Bill still works without auto-print.
+- Tests: iteration_7.json — 3/3 backend, all 8 frontend items — 100%.
+
 ## 2026-02-24 — Delta v7 (Bills page restored + Edit + Thermal Print)
 - **Bills page restored at `/entry/bills`** — renamed "Customer Details" — shows full columns (bill #, name, mobile, order ₹, discount, tax, total, payment, date+time, actions). Nav entry restored.
 - **Full manual edit** — every field of a bill editable (customer, items w/ price/qty/discount %, overall discount, payment mode). Backend `PUT /api/bills/{id}` reverses prior inventory deductions then re-applies new ones so stock stays net-correct.
