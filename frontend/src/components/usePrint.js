@@ -4,11 +4,8 @@ import { PrintableReceipt } from "./PrintableReceipt";
 /**
  * Portal-less print host that mounts hidden, populates with bill + kind,
  * then triggers window.print().
- *
- * Usage:
- *   const { printBill, printKot, PrintHost } = usePrint();
- *   <PrintHost />
- *   <button onClick={() => printBill(bill)}>Print Bill</button>
+ * Sets document.title to the bill number so PDF "Save as" defaults to
+ * "<bill_number>.pdf" instead of the app title.
  */
 export function usePrint() {
   const [bill, setBill] = useState(null);
@@ -17,8 +14,19 @@ export function usePrint() {
   const trigger = useCallback((b, k) => {
     setBill(b);
     setKind(k);
-    // Small timeout so DOM renders before print dialog opens
-    setTimeout(() => window.print(), 50);
+    setTimeout(() => {
+      const prevTitle = document.title;
+      const fname = b?.bill_number ? `${b.bill_number}${k === "kot" ? "-KOT" : ""}` : "Deja Brew";
+      document.title = fname;
+      const onAfter = () => {
+        document.title = prevTitle;
+        window.removeEventListener("afterprint", onAfter);
+      };
+      window.addEventListener("afterprint", onAfter);
+      window.print();
+      // Fallback in case afterprint never fires (some browsers)
+      setTimeout(() => { document.title = prevTitle; }, 4000);
+    }, 60);
   }, []);
 
   const printBill = useCallback((b) => trigger(b, "bill"), [trigger]);

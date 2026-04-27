@@ -22,6 +22,7 @@ from routes.online_sales_router import router as online_sales_router
 from routes.routines_router import router as routines_router
 from routes.banking_router import router as banking_router
 from routes.misc_payments_router import router as misc_payments_router
+from routes.customers_router import router as customers_router
 
 app = FastAPI(title="Deja Brew ERP", redirect_slashes=False)
 
@@ -61,6 +62,7 @@ app.include_router(online_sales_router, prefix="/api/online-sales", tags=["onlin
 app.include_router(routines_router, prefix="/api/routines", tags=["routines"])
 app.include_router(banking_router, prefix="/api/banking", tags=["banking"])
 app.include_router(misc_payments_router, prefix="/api/misc-payments", tags=["misc-payments"])
+app.include_router(customers_router, prefix="/api/customers", tags=["customers"])
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

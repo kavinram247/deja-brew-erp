@@ -1,0 +1,41 @@
+{
+  "summary": "Delta v11 testing — all 5 advertised changes verified. Backend: 6/6 /api/customers tests PASS (auth-gated, shape, is_repeat consistency, sort desc by last_visit, bounds). Frontend: title='Deja Brew ERP' PASS; emergent badge/posthog/emergent-main.js all ABSENT PASS; print-bill captures document.title='DB202604270008' at window.print() call and restores to 'Deja Brew ERP' after 4s PASS; print-kot captures 'DB202604270008-KOT' PASS; Customers page renders 23 rows, all stat cards (cust-total/repeat/phone/visits/spent), filter pills, sort dropdown, search+clear, CSV export downloads 'dejabrew-customers-2026-04-27.csv' PASS; employee redirected from /dashboard/customers → /entry/walkins PASS. ONE REAL UI BUG: menu-item cards on /entry/billing are 654px TALL (expected <70px) — grid container with flex-1 + no grid-auto-rows:min-content stretches the single row to fill remaining height, making each 'compact' card a full-height vertical strip with text at top. The width (102px) and font-size/padding (text-[11px], px-2 py-1.5) are correct; only the vertical stretch is wrong.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Billing.jsx menu-item grid (line 160)",
+        "issue": "HIGH: menu-item cards stretch to ~654px tall when there are few items (seeded menu has 4 items in a 6-col grid = 1 row). Root cause: the grid container has `flex-1` giving it the full remaining column height (~654px), and no `grid-auto-rows: min-content` (or `items-start`) is specified, so the single implicit grid row stretches to fill the container. Each button then stretches via default `align-self: stretch`. Result: 'compact' cards are actually VERY TALL vertical strips with the name + price floating to the top — visually the opposite of the v11 'more compact, less vertical' goal. Visible in the attached screenshot where 4 menu items each occupy the entire grid height with mostly whitespace below.",
+        "selector": "[data-testid^='menu-item-']",
+        "priority": "HIGH",
+        "fix_suggestion": "Add `auto-rows-min` (Tailwind `grid-auto-rows: min-content`) OR `content-start items-start` to the grid container class on line 160 so rows hug content. Alternatively remove `flex-1` or replace with a max-height. Quick fix: `className=\"grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 auto-rows-min gap-1.5 overflow-y-auto flex-1 pb-2 content-start\"`"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_customers_v11.py",
+    "/app/test_reports/pytest/v11_results.xml"
+  ],
+  "action_items": [
+    "FIX menu-item card vertical stretch on /entry/billing — add `auto-rows-min content-start` (or equivalent) to the grid container at Billing.jsx line 160 so compact cards actually are compact. Currently the v11 'denser grid + tighter padding' feature is only half-delivered: width/padding/font are correct (102px / px-2 py-1.5 / text-[11px]) but each card is 654px tall due to grid row stretching.",
+    "(Optional polish) In the seeded demo with only 4 items, the tall empty cells still look odd; consider also setting a max card height like `max-h-[80px]`."
+  ],
+  "critical_code_review_comments": [
+    "Billing.jsx grid at line 160 mixes `flex-1` (stretchy container) with an implicit single-row layout — grid items default to `align-self: stretch` so tracks expand to container height. Either cap row size (`auto-rows-min` / explicit `grid-auto-rows: 60px`) or use plain flex-wrap for dense card lists. This is the second time the Billing page ships with a subtle layout miss; consider a visual regression snapshot for /entry/billing.",
+    "customers_router.py query scans ALL bills with `to_list(50000)` on every GET — fine for seed but will be slow once bills cross a few thousand. Recommend adding a `customer_phone` / `customer_name` index and/or an aggregation pipeline ($group) to push work to Mongo. Current implementation is O(N) + O(N log N) sort in Python.",
+    "customers_router.py line 54 sorts by `last_visit` as a string (ISO date '2026-04-27'). That's lexicographically correct for ISO dates but breaks if any row has empty string '' (sorts FIRST instead of LAST when reverse=True). Edge case — probably fine since such rows are filtered out, but worth a comment.",
+    "usePrint.js uses a 60ms setTimeout before calling window.print — on slow devices the PrintableReceipt may not be fully painted, leading to a blank print. Consider using `requestAnimationFrame` twice instead of a magic 60ms. The 4000ms fallback for title-restore is also magic; `onafterprint` should be reliable in modern browsers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_customers_v11.py (new — 6 tests for customers aggregation endpoint)"
+  ],
+  "success_rate": {"backend": "6/6 (100%)", "frontend": "11/12 assertions PASS (only menu-item height check failed — real UI bug)"},
+  "test_credentials": "owner@dejabrew.com / BrewOwner2024 + employee@dejabrew.com / Emp12345 — both verified working",
+  "seed_data_creation": "No new data created. Existing 23 customers (from previously seeded 8+ bills) were sufficient.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v11 deltas verified: title='Deja Brew ERP', no emergent badge/posthog, print-filename via document.title override works (captures e.g. 'DB202604270008' and 'DB202604270008-KOT' at window.print() call, restores after 4s fallback), /dashboard/customers owner-only page with 23 seeded customers, CSV export filename 'dejabrew-customers-YYYY-MM-DD.csv'. ONE BUG: Billing.jsx grid container at line 160 is `flex-1` with no `auto-rows-min` so menu-item cards stretch to ~654px tall when the grid has only one row of items. Fix is a 1-word Tailwind class addition. Seeded menu has 4 items (TEST_Latte_4491d3, TEST_v7_latte, Espresso, TEST_Espresso2).",
+  "rca_of_the_issue": "v11 change (4) asked for denser grid + tighter padding; the developer correctly added `grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-1.5` + `px-2 py-1.5 text-[11px]` and reduced internal spacing — but left the grid container's `flex-1` height expansion in place without `auto-rows-min` / `content-start`. CSS Grid default behaviour is `grid-auto-rows: auto` and default items have `align-self: stretch`, so when there is exactly one row and the container is tall, that row fills the container vertically. With 4 seeded menu items on a 6-col grid at 1440px viewport, exactly one row exists → row height = container height = 654px → each 'compact' button is rendered as a tall vertical strip. Mitigation: add `auto-rows-min content-start` (or `max-h-[80px]` on the button) to the className on Billing.jsx line 160."
+}

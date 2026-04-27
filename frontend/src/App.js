@@ -27,6 +27,7 @@ import DPurchases   from "./pages/dashboard/DPurchases";
 import DInventory   from "./pages/dashboard/DInventory";
 import DBilling     from "./pages/dashboard/DBilling";
 import Banking      from "./pages/dashboard/Banking";
+import Customers    from "./pages/dashboard/Customers";
 import Settings     from "./pages/dashboard/Settings";
 import { Coffee } from "lucide-react";
 
@@ -87,6 +88,7 @@ function App() {
             <Route path="billing"   element={<DBilling />} />
             <Route path="banking"   element={<Banking />} />
             <Route path="misc-payments" element={<MiscPayments />} />
+            <Route path="customers" element={<Customers />} />
             <Route path="settings"  element={<Settings />} />
           </Route>
 

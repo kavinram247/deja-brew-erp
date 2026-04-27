@@ -157,7 +157,7 @@ export default function Billing() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 overflow-y-auto flex-1 pb-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 overflow-y-auto flex-1 pb-2">
             {filtered.length === 0 ? (
               <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">
                 {q ? `No items match "${search}"` : "No items — add from Menu"}
@@ -166,11 +166,11 @@ export default function Billing() {
               const inCart = cart.find((c) => c.id === item.id);
               return (
                 <button key={item.id} onClick={() => addToCart(item)}
-                  className={`bg-white rounded-xl border p-2 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_2px_6px_rgba(44,36,27,0.04)] relative ${inCart ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
+                  className={`bg-white rounded-lg border px-2 py-1.5 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_1px_3px_rgba(44,36,27,0.04)] relative ${inCart ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
                   data-testid={`menu-item-${item.id}`}>
-                  {inCart && <span className="absolute top-1 right-1 bg-[#8B5A2B] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{inCart.qty}</span>}
-                  <p className="font-semibold text-[#2C241B] text-xs leading-tight line-clamp-2">{item.name}</p>
-                  <p className="text-[#8B5A2B] font-bold text-xs mt-1">₹{item.price}</p>
+                  {inCart && <span className="absolute -top-1 -right-1 bg-[#8B5A2B] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{inCart.qty}</span>}
+                  <p className="font-semibold text-[#2C241B] text-[11px] leading-tight line-clamp-2 min-h-[26px]">{item.name}</p>
+                  <p className="text-[#8B5A2B] font-bold text-[11px] mt-0.5">₹{item.price}</p>
                 </button>
               );
             })}
