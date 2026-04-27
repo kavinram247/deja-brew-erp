@@ -1,5 +1,13 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-27 — Delta v11 (Branding · Print Filename · Customer Directory)
+1. **Compact menu items** in /entry/billing — denser grid (3-7 cols), `auto-rows-min content-start` so cards hug content (~58px tall, was 654px under-fix).
+2. **"Made with Emergent" badge removed** from `index.html`. PostHog analytics + emergent-main.js script removed too.
+3. **Bill print PDF filename = bill_number** — `usePrint` now sets `document.title` to the bill number before `window.print()` and restores on `afterprint`.
+4. **Page <title>** changed to **"Deja Brew ERP"**.
+5. **NEW `/dashboard/customers` page** — auto-aggregated customer directory from bills (grouped by phone, else lowercased name). Columns: name, mobile, first/last visit, visit count, repeat status, total spent. Search, filters (All/Repeat/New/With Phone), sort dropdown, branded CSV + PDF export. Backend: GET `/api/customers`. Sidebar nav item "Customers" (UserCheck icon).
+- Tests: iteration_10.json + iteration_11.json — backend 6/6 100%, frontend 12/12 100% (after auto-rows-min fix).
+
 ## 2026-02-26 — Delta v10 (Searchable menu in Billing)
 - **Search bar added** to /entry/billing menu section. Filters items live by name OR category (case-insensitive). Compose with category pill filter. X-icon clear button when typed.
 - Tests: iteration_9.json — frontend 6/6 (100%). Testing agent caught + auto-fixed a missing `Search` import regression and flagged Trash2→X icon swap, both applied.
