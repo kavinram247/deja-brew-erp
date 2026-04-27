@@ -1,5 +1,12 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-26 — Delta v9 (Billing UX fixes)
+- **Smaller menu item buttons** — grid 3-6 cols (was 2-4), `p-2`, smaller fonts.
+- **Split mode submit buttons no longer hidden** — bill summary middle is scrollable (max-height 45vh), Total + Submit buttons live in a sticky footer that always stays visible.
+- **Submit + Print = Bill + KOT** — clicking 'Submit + Print' now auto-prints the customer bill AND the kitchen KOT (sequential, 700ms apart). The standalone 'Submit + KOT' button has been removed.
+- Manual Print Bill / Print KOT buttons in the lastBill header remain for reprints.
+- Tests: iteration_8.json — frontend 7/7 (post fix). Caught a missing ChefHat import regression — fixed.
+
 ## 2026-02-25 — Delta v8 (Float drilldown + Owner Misc CRUD + Submit&Print)
 - **Detailed float history by date** — `/dashboard/purchases` Daily Float History rows now expand inline to show that day's expense items (Time / Description / Category / Amount + Day Total).
 - **Owner can manage misc payments** — `/dashboard/misc-payments` now uses the same full CRUD component as `/entry/misc-payments`. Both employee + owner can add/delete misc payments. (Removed the read-only DMiscPayments.jsx.)
