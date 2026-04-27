@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat, Search } from "lucide-react";
 import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
@@ -16,6 +16,7 @@ export default function Billing() {
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
   const [category, setCategory] = useState("All");
+  const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [lastBill, setLastBill] = useState(null);
 
@@ -30,7 +31,11 @@ export default function Billing() {
   }, []);
 
   const categories = ["All", ...new Set(menuItems.map((i) => i.category))];
-  const filtered = category === "All" ? menuItems.filter((i) => i.active) : menuItems.filter((i) => i.category === category && i.active);
+  const q = search.trim().toLowerCase();
+  const filtered = menuItems
+    .filter((i) => i.active)
+    .filter((i) => category === "All" || i.category === category)
+    .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
 
   const addToCart = (item) => {
     setCart((p) => {
@@ -129,7 +134,22 @@ export default function Billing() {
       <div className="flex gap-4 flex-1 min-h-0">
         {/* LEFT: Menu */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex gap-2 mb-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7D71]" />
+              <input
+                type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search menu items..."
+                className="w-full pl-9 pr-8 py-1.5 rounded-full bg-white border border-amber-900/20 text-xs focus:outline-none focus:border-[#8B5A2B] focus:ring-2 focus:ring-[#8B5A2B]/15"
+                data-testid="billing-search-input" />
+              {search && (
+                <button onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A7D71] hover:text-[#5C4F43]"
+                  data-testid="billing-search-clear">
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
             {categories.map((cat) => (
               <button key={cat} onClick={() => setCategory(cat)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${category === cat ? "bg-[#8B5A2B] text-white" : "bg-white border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10"}`}
@@ -139,7 +159,9 @@ export default function Billing() {
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 overflow-y-auto flex-1 pb-2">
             {filtered.length === 0 ? (
-              <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">No items — add from Menu</div>
+              <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">
+                {q ? `No items match "${search}"` : "No items — add from Menu"}
+              </div>
             ) : filtered.map((item) => {
               const inCart = cart.find((c) => c.id === item.id);
               return (
