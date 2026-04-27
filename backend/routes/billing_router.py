@@ -9,6 +9,7 @@ from auth_utils import get_current_user
 router = APIRouter()
 
 TAX_RATE = 0.025  # 2.5% CGST + 2.5% SGST
+SERVICE_RATE = 0.05  # 5% optional service charge
 
 
 class BillItemCreate(BaseModel):
@@ -27,6 +28,24 @@ class BillCreate(BaseModel):
     payment_mode: str
     cash_amount: float = 0.0
     upi_amount: float = 0.0
+    service_charge_enabled: bool = False
+
+
+def compute_totals(calc_items, overall_discount, service_enabled):
+    subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
+    taxable = round(max(0.0, subtotal - overall_discount), 2)
+    cgst = round(taxable * TAX_RATE, 2)
+    sgst = round(taxable * TAX_RATE, 2)
+    service = round(taxable * SERVICE_RATE, 2) if service_enabled else 0.0
+    raw_total = taxable + cgst + sgst + service
+    rounded_total = round(raw_total)
+    round_off = round(rounded_total - raw_total, 2)
+    return {
+        "subtotal": subtotal, "taxable": taxable,
+        "cgst": cgst, "sgst": sgst,
+        "service_charge": service, "service_charge_enabled": bool(service_enabled),
+        "round_off": round_off, "total": float(rounded_total),
+    }
 
 
 def calc_item(item: BillItemCreate) -> dict:
@@ -99,11 +118,8 @@ async def create_bill(input: BillCreate, request: Request):
     now = datetime.now(timezone.utc)
 
     calc_items = [calc_item(i) for i in input.items]
-    subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
-    taxable = round(max(0, subtotal - input.overall_discount), 2)
-    cgst = round(taxable * TAX_RATE, 2)
-    sgst = round(taxable * TAX_RATE, 2)
-    total = round(taxable + cgst + sgst, 2)
+    t = compute_totals(calc_items, input.overall_discount, input.service_charge_enabled)
+    total = t["total"]
 
     if input.payment_mode == "cash":
         cash, upi = total, 0.0
@@ -121,10 +137,14 @@ async def create_bill(input: BillCreate, request: Request):
         "customer_name": input.customer_name,
         "customer_phone": input.customer_phone,
         "items": calc_items,
-        "subtotal": subtotal,
+        "subtotal": t["subtotal"],
         "overall_discount": input.overall_discount,
-        "taxable_amount": taxable,
-        "cgst": cgst, "sgst": sgst, "total": total,
+        "taxable_amount": t["taxable"],
+        "cgst": t["cgst"], "sgst": t["sgst"],
+        "service_charge_enabled": t["service_charge_enabled"],
+        "service_charge": t["service_charge"],
+        "round_off": t["round_off"],
+        "total": total,
         "payment_mode": input.payment_mode,
         "cash_amount": cash, "upi_amount": upi,
         "date": today_str,
@@ -169,11 +189,8 @@ async def update_bill(bill_id: str, input: BillCreate, request: Request):
 
     # 2. Recompute amounts
     calc_items = [calc_item(i) for i in input.items]
-    subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
-    taxable = round(max(0, subtotal - input.overall_discount), 2)
-    cgst = round(taxable * TAX_RATE, 2)
-    sgst = round(taxable * TAX_RATE, 2)
-    total = round(taxable + cgst + sgst, 2)
+    t = compute_totals(calc_items, input.overall_discount, input.service_charge_enabled)
+    total = t["total"]
 
     if input.payment_mode == "cash":
         cash, upi = total, 0.0
@@ -190,10 +207,14 @@ async def update_bill(bill_id: str, input: BillCreate, request: Request):
         "customer_name": input.customer_name,
         "customer_phone": input.customer_phone,
         "items": calc_items,
-        "subtotal": subtotal,
+        "subtotal": t["subtotal"],
         "overall_discount": input.overall_discount,
-        "taxable_amount": taxable,
-        "cgst": cgst, "sgst": sgst, "total": total,
+        "taxable_amount": t["taxable"],
+        "cgst": t["cgst"], "sgst": t["sgst"],
+        "service_charge_enabled": t["service_charge_enabled"],
+        "service_charge": t["service_charge"],
+        "round_off": t["round_off"],
+        "total": total,
         "payment_mode": input.payment_mode,
         "cash_amount": cash, "upi_amount": upi,
         "inventory_deductions": deductions,
