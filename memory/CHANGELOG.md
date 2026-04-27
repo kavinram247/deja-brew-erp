@@ -1,5 +1,9 @@
 # Deja Brew ERP — Changelog
 
+## 2026-02-26 — Delta v10 (Searchable menu in Billing)
+- **Search bar added** to /entry/billing menu section. Filters items live by name OR category (case-insensitive). Compose with category pill filter. X-icon clear button when typed.
+- Tests: iteration_9.json — frontend 6/6 (100%). Testing agent caught + auto-fixed a missing `Search` import regression and flagged Trash2→X icon swap, both applied.
+
 ## 2026-02-26 — Delta v9 (Billing UX fixes)
 - **Smaller menu item buttons** — grid 3-6 cols (was 2-4), `p-2`, smaller fonts.
 - **Split mode submit buttons no longer hidden** — bill summary middle is scrollable (max-height 45vh), Total + Submit buttons live in a sticky footer that always stays visible.

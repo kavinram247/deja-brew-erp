@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat, Search } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat, Search, X } from "lucide-react";
 import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
@@ -146,7 +146,7 @@ export default function Billing() {
                 <button onClick={() => setSearch("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A7D71] hover:text-[#5C4F43]"
                   data-testid="billing-search-clear">
-                  <Trash2 size={12} />
+                  <X size={14} />
                 </button>
               )}
             </div>
