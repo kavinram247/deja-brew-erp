@@ -3,6 +3,7 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download, FileText } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
+import { todayYMD, shiftYMD } from "../../utils/date";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
 
@@ -11,7 +12,7 @@ function fmt(iso) {
 }
 
 export default function DBilling() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayYMD();
   const [date, setDate] = useState(today);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +28,7 @@ export default function DBilling() {
   useEffect(() => { load(date); }, [date]); // eslint-disable-line
 
   const changeDate = (delta) => {
-    const dt = new Date(date + "T00:00:00"); dt.setDate(dt.getDate() + delta);
-    setDate(dt.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, delta));
   };
 
   const totalRev = bills.reduce((s, b) => s + b.total, 0);

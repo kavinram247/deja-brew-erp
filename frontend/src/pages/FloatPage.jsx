@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
+import { todayYMD, shiftYMD } from "../utils/date";
 
 const CATEGORIES = ["Raw Materials", "Consumables", "Utilities", "Staff", "Maintenance", "Other"];
 
@@ -21,9 +22,9 @@ export default function FloatPage() {
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("Raw Materials");
   const [saving, setSaving] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => todayYMD());
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayYMD();
 
   const load = async () => {
     setLoading(true);
@@ -37,9 +38,7 @@ export default function FloatPage() {
   useEffect(() => { load(); }, [date]);
 
   const changeDate = (days) => {
-    const d = new Date(date + "T00:00:00");
-    d.setDate(d.getDate() + days);
-    setDate(d.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, days));
   };
 
   const handleAddExpense = async (e) => {

@@ -3,6 +3,7 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
+import { todayYMD, shiftYMD } from "../../utils/date";
 
 const CATEGORIES = ["Raw Materials", "Consumables", "Utilities", "Staff", "Maintenance", "Other"];
 
@@ -16,8 +17,8 @@ export default function Purchases() {
   const [showForm, setShowForm] = useState(false);
   const [desc, setDesc] = useState(""); const [amount, setAmount] = useState(""); const [cat, setCat] = useState("Raw Materials");
   const [saving, setSaving] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const today = new Date().toISOString().split("T")[0];
+  const [date, setDate] = useState(() => todayYMD());
+  const today = todayYMD();
   const isToday = date === today;
 
   const load = async () => {
@@ -30,8 +31,7 @@ export default function Purchases() {
   useEffect(() => { load(); }, [date]);
 
   const changeDate = (d) => {
-    const dt = new Date(date + "T00:00:00"); dt.setDate(dt.getDate() + d);
-    setDate(dt.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, d));
   };
 
   const handleAdd = async (e) => {

@@ -3,6 +3,7 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Banknote, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
+import { todayYMD, shiftYMD } from "../../utils/date";
 
 const CATEGORIES = ["Tips", "Scrap Sale", "Refund Received", "Deposit Refund", "Reimbursement", "Other"];
 const MODES = ["cash", "upi", "other"];
@@ -12,7 +13,7 @@ function fmtTime(iso) {
 }
 
 export default function MiscPayments() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayYMD();
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,7 @@ export default function MiscPayments() {
   useEffect(() => { load(date); }, [date]); // eslint-disable-line
 
   const changeDate = (delta) => {
-    const dt = new Date(date + "T00:00:00"); dt.setDate(dt.getDate() + delta);
-    setDate(dt.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, delta));
   };
 
   const handleAdd = async (e) => {

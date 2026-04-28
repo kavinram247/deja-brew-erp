@@ -3,6 +3,7 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Receipt, ChevronLeft, ChevronRight, Eye, X, Printer, ChefHat, Edit2, Plus, Minus, Trash2 } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
+import { todayYMD, shiftYMD } from "../../utils/date";
 import { usePrint } from "../../components/usePrint";
 
 const TAX = 0.025;
@@ -15,7 +16,7 @@ function fmtDateTime(iso) {
 }
 
 export default function EntryBills() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayYMD();
   const [date, setDate] = useState(today);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +33,7 @@ export default function EntryBills() {
   useEffect(() => { load(date); }, [date]); // eslint-disable-line
 
   const changeDate = (delta) => {
-    const dt = new Date(date + "T00:00:00"); dt.setDate(dt.getDate() + delta);
-    setDate(dt.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, delta));
   };
 
   const totalRev = bills.reduce((s, b) => s + (b.total || 0), 0);

@@ -3,13 +3,14 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Landmark, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
+import { todayYMD, shiftYMD } from "../../utils/date";
 
 function fmtTime(iso) {
   return new Date(iso).toLocaleString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
 }
 
 export default function EntryBanking() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayYMD();
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +28,7 @@ export default function EntryBanking() {
   useEffect(() => { load(date); }, [date]); // eslint-disable-line
 
   const changeDate = (delta) => {
-    const dt = new Date(date + "T00:00:00"); dt.setDate(dt.getDate() + delta);
-    setDate(dt.toISOString().split("T")[0]);
+    setDate(shiftYMD(date, delta));
   };
 
   const isToday = date === today;
