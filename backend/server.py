@@ -23,6 +23,7 @@ from routes.routines_router import router as routines_router
 from routes.banking_router import router as banking_router
 from routes.misc_payments_router import router as misc_payments_router
 from routes.customers_router import router as customers_router
+from routes.inventory_movement_router import router as inventory_movement_router
 
 app = FastAPI(title="Deja Brew ERP", redirect_slashes=False)
 
@@ -63,6 +64,7 @@ app.include_router(routines_router, prefix="/api/routines", tags=["routines"])
 app.include_router(banking_router, prefix="/api/banking", tags=["banking"])
 app.include_router(misc_payments_router, prefix="/api/misc-payments", tags=["misc-payments"])
 app.include_router(customers_router, prefix="/api/customers", tags=["customers"])
+app.include_router(inventory_movement_router, prefix="/api/inventory-movements", tags=["inventory-movements"])
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -82,6 +84,7 @@ async def startup_event():
     await db.online_sales.create_index("date")
     await db.routine_executions.create_index("date")
     await db.banking.create_index("date")
+    await db.inventory_movements.create_index([("inventory_item_id", 1), ("date", 1)], unique=True)
 
     # Migrate inventory: rename 'quantity' to 'current_stock', add 'section'
     items = await db.inventory.find(

@@ -19,6 +19,7 @@ import Routines       from "./pages/entry/Routines";
 import EntryMenu      from "./pages/entry/MenuPage";
 import EntryBanking   from "./pages/entry/Banking";
 import MiscPayments   from "./pages/entry/MiscPayments";
+import InventoryMovement from "./pages/entry/InventoryMovement";
 // Dashboard pages
 import Overview     from "./pages/dashboard/Overview";
 import DWalkins     from "./pages/dashboard/DWalkins";
@@ -75,6 +76,8 @@ function App() {
             <Route path="menu"      element={<EntryMenu />} />
             <Route path="banking"   element={<EntryBanking />} />
             <Route path="misc-payments" element={<MiscPayments />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="inventory-movement" element={<InventoryMovement />} />
           </Route>
 
           {/* Dashboard — owner only */}
