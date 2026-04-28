@@ -88,6 +88,7 @@ function App() {
             <Route path="sales"     element={<DSales />} />
             <Route path="purchases" element={<DPurchases />} />
             <Route path="inventory" element={<DInventory />} />
+            <Route path="inventory-movement" element={<InventoryMovement />} />
             <Route path="billing"   element={<DBilling />} />
             <Route path="banking"   element={<Banking />} />
             <Route path="misc-payments" element={<MiscPayments />} />
