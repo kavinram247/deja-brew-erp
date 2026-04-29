@@ -45,21 +45,39 @@ async def get_stats(request: Request, date_str: Optional[str] = None):
         {"$expr": {"$lte": ["$current_stock", "$min_quantity"]}}
     )
 
-    # 7-day trend
+    # 7-day trend — 3 aggregation queries instead of 21 individual ones
+    trend_start = (datetime.now(timezone.utc) - timedelta(days=6)).strftime("%Y-%m-%d")
+    trend_end = today
+
+    t_bills = {r["_id"]: r for r in await db.bills.aggregate([
+        {"$match": {"date": {"$gte": trend_start, "$lte": trend_end}, "is_voided": {"$ne": True}}},
+        {"$group": {"_id": "$date", "revenue": {"$sum": "$total"}, "count": {"$sum": 1}}},
+    ]).to_list(None)}
+    t_online = {r["_id"]: r for r in await db.online_sales.aggregate([
+        {"$match": {"date": {"$gte": trend_start, "$lte": trend_end}}},
+        {"$group": {"_id": "$date", "revenue": {"$sum": "$net_sales"}}},
+    ]).to_list(None)}
+    t_walkins = {r["_id"]: r for r in await db.walkins.aggregate([
+        {"$match": {"date": {"$gte": trend_start, "$lte": trend_end}}},
+        {"$group": {"_id": "$date", "count": {"$sum": 1}, "guests": {"$sum": {"$ifNull": ["$num_guests", 1]}}}},
+    ]).to_list(None)}
+
     trend = []
     for i in range(6, -1, -1):
         d = (datetime.now(timezone.utc) - timedelta(days=i)).strftime("%Y-%m-%d")
-        d_bills = await db.bills.find({"date": d, "is_voided": {"$ne": True}}).to_list(1000)
-        d_online = await db.online_sales.find({"date": d}).to_list(1000)
-        d_walkins = await db.walkins.find({"date": d}).to_list(1000)
+        b = t_bills.get(d, {})
+        o = t_online.get(d, {})
+        w = t_walkins.get(d, {})
+        offline = b.get("revenue", 0)
+        online = o.get("revenue", 0)
         trend.append({
             "date": d,
-            "offline": sum(b.get("total", 0) for b in d_bills),
-            "online": sum(o.get("net_sales", 0) for o in d_online),
-            "revenue": sum(b.get("total", 0) for b in d_bills) + sum(o.get("net_sales", 0) for o in d_online),
-            "walkins": len(d_walkins),
-            "guests": sum(w.get("num_guests", 1) for w in d_walkins),
-            "bills": len(d_bills),
+            "offline": offline,
+            "online": online,
+            "revenue": offline + online,
+            "walkins": w.get("count", 0),
+            "guests": w.get("guests", 0),
+            "bills": b.get("count", 0),
         })
 
     # Recent bills
@@ -100,28 +118,58 @@ async def get_analytics(request: Request, from_date: Optional[str] = None, to_da
     else:
         start = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
 
+    # 3 aggregation queries regardless of date range (was N×3 queries in a loop)
+    bills_by_date = {r["_id"]: r for r in await db.bills.aggregate([
+        {"$match": {"date": {"$gte": start, "$lte": end}, "is_voided": {"$ne": True}}},
+        {"$group": {
+            "_id": "$date",
+            "offline_revenue": {"$sum": "$total"},
+            "bills": {"$sum": 1},
+            "cash": {"$sum": "$cash_amount"},
+            "upi": {"$sum": "$upi_amount"},
+        }},
+    ]).to_list(None)}
+    online_by_date = {r["_id"]: r for r in await db.online_sales.aggregate([
+        {"$match": {"date": {"$gte": start, "$lte": end}}},
+        {"$group": {
+            "_id": "$date",
+            "online_revenue": {"$sum": "$net_sales"},
+            "platforms": {"$push": {"p": "$platform", "v": "$net_sales"}},
+        }},
+    ]).to_list(None)}
+    walkins_by_date = {r["_id"]: r for r in await db.walkins.aggregate([
+        {"$match": {"date": {"$gte": start, "$lte": end}}},
+        {"$group": {
+            "_id": "$date",
+            "walkins": {"$sum": 1},
+            "guests": {"$sum": {"$ifNull": ["$num_guests", 1]}},
+        }},
+    ]).to_list(None)}
+
     rows = []
     cur = datetime.strptime(start, "%Y-%m-%d")
     end_dt = datetime.strptime(end, "%Y-%m-%d")
     while cur <= end_dt:
         d = cur.strftime("%Y-%m-%d")
-        d_bills = await db.bills.find({"date": d, "is_voided": {"$ne": True}}).to_list(1000)
-        d_online = await db.online_sales.find({"date": d}).to_list(1000)
-        d_walkins = await db.walkins.find({"date": d}).to_list(1000)
+        b = bills_by_date.get(d, {})
+        o = online_by_date.get(d, {})
+        w = walkins_by_date.get(d, {})
         platform_map = {}
-        for o in d_online:
-            p = o.get("platform", "other")
-            platform_map[p] = platform_map.get(p, 0) + o.get("net_sales", 0)
+        for entry in o.get("platforms", []):
+            p = entry.get("p", "other")
+            platform_map[p] = platform_map.get(p, 0) + entry.get("v", 0)
+        offline = b.get("offline_revenue", 0)
+        online = o.get("online_revenue", 0)
         rows.append({
             "date": d,
-            "offline_revenue": sum(b.get("total", 0) for b in d_bills),
-            "online_revenue": sum(o.get("net_sales", 0) for o in d_online),
-            "total_revenue": sum(b.get("total", 0) for b in d_bills) + sum(o.get("net_sales", 0) for o in d_online),
-            "bills": len(d_bills),
-            "walkins": len(d_walkins),
-            "guests": sum(w.get("num_guests", 1) for w in d_walkins),
-            "cash": sum(b.get("cash_amount", 0) for b in d_bills),
-            "upi": sum(b.get("upi_amount", 0) for b in d_bills),
+            "offline_revenue": offline,
+            "online_revenue": online,
+            "total_revenue": offline + online,
+            "bills": b.get("bills", 0),
+            "walkins": w.get("walkins", 0),
+            "guests": w.get("guests", 0),
+            "cash": b.get("cash", 0),
+            "upi": b.get("upi", 0),
             "platforms": platform_map,
         })
         cur += timedelta(days=1)
