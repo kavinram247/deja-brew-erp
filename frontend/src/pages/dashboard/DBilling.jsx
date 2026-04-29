@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
 import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download, FileText } from "lucide-react";
@@ -16,11 +16,12 @@ export default function DBilling() {
   const [date, setDate] = useState(today);
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
   const [showBill, setShowBill] = useState(null);
 
   const load = async (d = date) => {
     setLoading(true);
-    try { const { data } = await api.get(`/bills?date_str=${d}`); setBills(data); }
+    try { const { data } = await api.get(`/bills?date_str=${d}`); setBills(data); hasLoaded.current = true; }
     catch { toast.error("Failed"); }
     finally { setLoading(false); }
   };
@@ -123,14 +124,14 @@ export default function DBilling() {
             {bills.length} bill{bills.length !== 1 ? "s" : ""}
           </h2>
         </div>
-        {loading ? <div className="text-center text-[#8A7D71] py-10">Loading...</div>
-          : bills.length === 0 ? (
+        {loading && !hasLoaded.current ? <div className="text-center text-[#8A7D71] py-10">Loading...</div>
+          : !loading && bills.length === 0 ? (
             <div className="text-center py-12">
               <Receipt size={36} className="text-[#C9B99A] mx-auto mb-2" />
               <p className="text-[#8A7D71] text-sm">No bills on this date</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto transition-opacity duration-150 ${loading ? "opacity-50" : "opacity-100"}`}>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-amber-900/10">
                   {["Bill #", "Time", "Customer", "Items", "Payment", "Total", ""].map((h) => (

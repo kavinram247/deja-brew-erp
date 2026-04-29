@@ -227,7 +227,7 @@ export default function InventoryMovement() {
 }
 
 // ───────── single item row in the daily view ─────────
-function DailyRow({ item, day, onChange, disabled }) {
+const DailyRow = React.memo(function DailyRow({ item, day, onChange, disabled }) {
   return (
     <div className="grid grid-cols-[1fr_120px_120px_120px_120px] gap-2 px-5 py-2.5 items-center hover:bg-[#F6F3EC]/30" data-testid={`im-day-row-${item.id}`}>
       <div className="flex items-center gap-2 min-w-0">
@@ -252,7 +252,7 @@ function DailyRow({ item, day, onChange, disabled }) {
         testid={`im-${item.id}-close`} />
     </div>
   );
-}
+});
 
 function CellInput({ value, onChange, muted, disabled, testid }) {
   const [local, setLocal] = useState(value ?? "");

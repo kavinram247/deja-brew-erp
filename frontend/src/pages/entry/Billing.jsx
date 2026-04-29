@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
 import { useDebounce } from "../../hooks/useDebounce";
 import { toast } from "sonner";
@@ -40,6 +40,8 @@ export default function Billing() {
     .filter((i) => i.active)
     .filter((i) => category === "All" || i.category === category)
     .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
+
+  const cartMap = useMemo(() => Object.fromEntries(cart.map((c) => [c.id, c.qty])), [cart]);
 
   const addToCart = (item) => {
     setCart((p) => {
@@ -170,18 +172,9 @@ export default function Billing() {
               <div className="col-span-full text-center text-[#8A7D71] py-10 text-sm">
                 {q ? `No items match "${search}"` : "No items — add from Menu"}
               </div>
-            ) : filtered.map((item) => {
-              const inCart = cart.find((c) => c.id === item.id);
-              return (
-                <button key={item.id} onClick={() => addToCart(item)}
-                  className={`bg-white rounded-lg border px-2 py-1.5 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_1px_3px_rgba(44,36,27,0.04)] relative ${inCart ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
-                  data-testid={`menu-item-${item.id}`}>
-                  {inCart && <span className="absolute -top-1 -right-1 bg-[#8B5A2B] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{inCart.qty}</span>}
-                  <p className="font-semibold text-[#2C241B] text-[11px] leading-tight line-clamp-2 min-h-[26px]">{item.name}</p>
-                  <p className="text-[#8B5A2B] font-bold text-[11px] mt-0.5">₹{item.price}</p>
-                </button>
-              );
-            })}
+            ) : filtered.map((item) => (
+              <MenuItemButton key={item.id} item={item} qty={cartMap[item.id] || 0} onAdd={addToCart} />
+            ))}
           </div>
         </div>
 
@@ -342,3 +335,15 @@ export default function Billing() {
     </div>
   );
 }
+
+const MenuItemButton = React.memo(function MenuItemButton({ item, qty, onAdd }) {
+  return (
+    <button onClick={() => onAdd(item)}
+      className={`bg-white rounded-lg border px-2 py-1.5 text-left hover:shadow-md transition-all active:scale-[0.97] shadow-[0_1px_3px_rgba(44,36,27,0.04)] relative ${qty > 0 ? "border-[#8B5A2B]/40 bg-[#8B5A2B]/5" : "border-amber-900/10"}`}
+      data-testid={`menu-item-${item.id}`}>
+      {qty > 0 && <span className="absolute -top-1 -right-1 bg-[#8B5A2B] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{qty}</span>}
+      <p className="font-semibold text-[#2C241B] text-[11px] leading-tight line-clamp-2 min-h-[26px]">{item.name}</p>
+      <p className="text-[#8B5A2B] font-bold text-[11px] mt-0.5">₹{item.price}</p>
+    </button>
+  );
+}, (prev, next) => prev.item.id === next.item.id && prev.qty === next.qty);
