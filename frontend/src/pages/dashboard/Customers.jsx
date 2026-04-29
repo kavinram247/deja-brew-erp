@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
+import { useDebounce } from "../../hooks/useDebounce";
 import { toast } from "sonner";
 import { Users2, Phone, Repeat, Star, Download, FileText, Search, X } from "lucide-react";
 import { downloadCsv } from "../../utils/csv";
@@ -16,6 +17,7 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 200);
   const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState("last_visit");
 
@@ -29,7 +31,7 @@ export default function Customers() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     let list = customers
       .filter((c) => filter === "all"
         || (filter === "repeat" && c.is_repeat)
@@ -43,7 +45,7 @@ export default function Customers() {
     else if (sortBy === "spent") list.sort((a, b) => b.total_spent - a.total_spent);
     else if (sortBy === "name") list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return list;
-  }, [customers, search, filter, sortBy]);
+  }, [customers, debouncedSearch, filter, sortBy]);
 
   const stats = useMemo(() => {
     const total = customers.length;
@@ -69,9 +71,9 @@ export default function Customers() {
     downloadCsv(`dejabrew-customers-${new Date().toISOString().slice(0, 10)}.csv`, filtered, cols);
     toast.success(`Exported ${filtered.length} customers`);
   };
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (filtered.length === 0) { toast.error("Nothing to export"); return; }
-    downloadPdf(filtered, cols, {
+    await downloadPdf(filtered, cols, {
       filename: `dejabrew-customers-${new Date().toISOString().slice(0, 10)}.pdf`,
       title: "Customer Directory",
       subtitle: `${filtered.length} customers · ${filter !== "all" ? FILTERS.find((f) => f.key === filter)?.label : "All"}${search ? ` · "${search}"` : ""}`,

@@ -77,9 +77,9 @@ export default function DPurchases() {
     toast.success(`Exported ${expensesShown.length} expense(s)`);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (expensesShown.length === 0) { toast.error("No expenses in range"); return; }
-    downloadPdf(expensesShown, [
+    await downloadPdf(expensesShown, [
       { key: "date", label: "Date" },
       { key: "timestamp", label: "Time", format: (v) => v ? fmtTime(v) : "" },
       { key: "description", label: "Description" },

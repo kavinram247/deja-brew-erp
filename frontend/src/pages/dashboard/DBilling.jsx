@@ -55,7 +55,7 @@ export default function DBilling() {
     toast.success(`Exported ${bills.length} bill(s)`);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (bills.length === 0) { toast.error("No bills to export"); return; }
     const cols = [
       { key: "bill_number", label: "Bill No" },
@@ -65,7 +65,7 @@ export default function DBilling() {
       { key: "payment_mode", label: "Pay", format: (v) => v === "cash+upi" ? "Split" : (v || "").toUpperCase() },
       { key: "total", label: "Total ₹", format: (v) => (v || 0).toFixed(2) },
     ];
-    downloadPdf(bills, cols, {
+    await downloadPdf(bills, cols, {
       filename: `dejabrew-bills-${date}.pdf`,
       title: "Billing Report",
       subtitle: date === today ? "Today" : date,

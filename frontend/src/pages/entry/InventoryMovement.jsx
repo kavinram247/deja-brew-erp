@@ -2,8 +2,8 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import api from "../../utils/api";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Download, BarChart3, Search, X, Grid3x3, Coffee } from "lucide-react";
-import * as XLSX from "xlsx";
 import { todayYMD, shiftYMD } from "../../utils/date";
+import { useDebounce } from "../../hooks/useDebounce";
 
 // ───────── helpers ─────────
 function fmtLongDate(ymd) {
@@ -31,6 +31,7 @@ export default function InventoryMovement() {
   const [data, setData] = useState({ rows: [] }); // month grid for current month
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 200);
   const [section, setSection] = useState("All");
   const [showMonthModal, setShowMonthModal] = useState(false);
   const saveTimers = useRef({});
@@ -59,7 +60,7 @@ export default function InventoryMovement() {
   }, [data.rows]);
 
   const visibleRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     return (data.rows || [])
       .map((r) => {
         const day = r.days?.find((d) => d.date === date);
@@ -70,7 +71,7 @@ export default function InventoryMovement() {
         if (q && !r.item.name.toLowerCase().includes(q)) return false;
         return true;
       });
-  }, [data.rows, date, search, section]);
+  }, [data.rows, date, debouncedSearch, section]);
 
   // Apply edit to local state + cascade carry-forward + persist (debounced)
   const updateCell = (itemId, field, rawValue) => {
@@ -298,7 +299,7 @@ function MonthMatrixModal({ initialMonth, onClose, onJumpToDay }) {
     return () => { alive = false; };
   }, [month]);
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     if (!grid.rows || grid.rows.length === 0) { toast.error("Nothing to export"); return; }
     const dates = grid.dates;
     const titleRow = [`${monthLabel(month).toUpperCase()} STOCK MANAGEMENT SYSTEM — BARISTA ITEMS`];
@@ -319,6 +320,7 @@ function MonthMatrixModal({ initialMonth, onClose, onJumpToDay }) {
     });
 
     const aoa = [titleRow, dateHeader, subHeader, ...dataRows];
+    const XLSX = await import("xlsx");
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     const totalCols = 3 + dates.length * 5;
     ws["!merges"] = [

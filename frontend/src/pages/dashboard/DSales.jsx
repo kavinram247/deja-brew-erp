@@ -59,7 +59,7 @@ export default function DSales() {
     toast.success(`Exported ${rows.length} day(s)`);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (rows.length === 0) { toast.error("No data to export"); return; }
     const cols = [
       { key: "date", label: "Date" },
@@ -71,7 +71,7 @@ export default function DSales() {
       { key: "upi", label: "UPI ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
       { key: "platforms", label: "Platforms", format: (v) => v ? Object.entries(v).map(([k, val]) => `${k}:₹${val}`).join(" · ") : "—" },
     ];
-    downloadPdf(rows, cols, {
+    await downloadPdf(rows, cols, {
       filename: `dejabrew-sales-${range.from}_to_${range.to}.pdf`,
       title: "Sales Report",
       subtitle: `${range.from} → ${range.to}`,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
+import { useDebounce } from "../../hooks/useDebounce";
 import { toast } from "sonner";
 import { ShoppingCart, Plus, Minus, Trash2, Printer, ChefHat, Search, X } from "lucide-react";
 import { usePrint } from "../../components/usePrint";
@@ -18,6 +19,7 @@ export default function Billing() {
   const [upiAmount, setUpiAmount] = useState("");
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 200);
   const [submitting, setSubmitting] = useState(false);
   const [lastBill, setLastBill] = useState(null);
 
@@ -33,7 +35,7 @@ export default function Billing() {
   }, []);
 
   const categories = ["All", ...new Set(menuItems.map((i) => i.category))];
-  const q = search.trim().toLowerCase();
+  const q = debouncedSearch.trim().toLowerCase();
   const filtered = menuItems
     .filter((i) => i.active)
     .filter((i) => category === "All" || i.category === category)

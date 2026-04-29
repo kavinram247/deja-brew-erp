@@ -77,7 +77,7 @@ export default function Overview() {
     toast.success(`Exported ${rows.length} day(s)`);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     if (rows.length === 0) { toast.error("No data to export"); return; }
     const cols = [
       { key: "date", label: "Date" },
@@ -90,7 +90,7 @@ export default function Overview() {
       { key: "cash", label: "Cash ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
       { key: "upi", label: "UPI ₹", format: (v) => (v || 0).toLocaleString("en-IN") },
     ];
-    downloadPdf(rows, cols, {
+    await downloadPdf(rows, cols, {
       filename: `dejabrew-overview-${range.from}_to_${range.to}.pdf`,
       title: "Business Overview",
       subtitle: rangeLabel,

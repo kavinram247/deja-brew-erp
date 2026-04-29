@@ -1,13 +1,6 @@
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-
-/**
- * Generate & download a branded Deja Brew PDF report.
- * rows: array of data rows
- * columns: [{ key, label, format? }]
- * opts: { filename, title, subtitle, summaryLines? }
- */
-export function downloadPdf(rows, columns, opts = {}) {
+export async function downloadPdf(rows, columns, opts = {}) {
+  const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
   const { filename = "dejabrew.pdf", title = "Report", subtitle = "", summaryLines = [] } = opts;
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();

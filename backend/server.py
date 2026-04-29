@@ -3,6 +3,7 @@ load_dotenv()
 
 from fastapi import FastAPI, APIRouter
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 import os
 import logging
 from datetime import datetime, timezone
@@ -35,6 +36,7 @@ origins += [o.strip() for o in extra_origins.split(",") if o.strip()]
 if "http://localhost:3000" not in origins:
     origins.append("http://localhost:3000")
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -78,12 +80,14 @@ async def startup_event():
     await db.users.create_index("email", unique=True)
     await db.walkins.create_index("date")
     await db.bills.create_index("date")
+    await db.bills.create_index([("date", 1), ("is_voided", 1)])
     await db.float_days.create_index("date", unique=True)
     await db.inventory.create_index("name")
     await db.recipes.create_index("menu_item_id", unique=True)
     await db.online_sales.create_index("date")
     await db.routine_executions.create_index("date")
     await db.banking.create_index("date")
+    await db.misc_payments.create_index("date")
     await db.inventory_movements.create_index([("inventory_item_id", 1), ("date", 1)], unique=True)
 
     # Migrate inventory: rename 'quantity' to 'current_stock', add 'section'
