@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
 import { Wallet, Filter, Download, FileText, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import DateRangeToolbar, { computeRange } from "../../components/DateRangeToolbar";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
@@ -64,6 +65,12 @@ export default function DPurchases() {
   const catMap = {};
   expenses.forEach((e) => { catMap[e.category] = (catMap[e.category] || 0) + (e.amount || 0); });
   const cats = ["All", ...Object.keys(catMap).sort()];
+
+  const trendData = useMemo(() => filtered.map((h) => {
+    const row = { date: h.date };
+    (h.expenses || []).forEach((e) => { row[e.category] = (row[e.category] || 0) + e.amount; });
+    return row;
+  }), [filtered]);
 
   const exportCsv = () => {
     if (expensesShown.length === 0) { toast.error("No expenses in range"); return; }
@@ -170,6 +177,27 @@ export default function DPurchases() {
               </div>
             )}
           </div>
+
+          {/* Daily spend trend */}
+          {trendData.length > 0 && Object.keys(catMap).length > 0 && (
+            <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-6">
+              <h2 className="font-semibold text-[#2C241B] mb-4" style={{ fontFamily: "Outfit, sans-serif" }}>Daily Spend Trend</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD1" />
+                  <XAxis dataKey="date" tick={{ fill: "#8A7D71", fontSize: 10 }} />
+                  <YAxis tick={{ fill: "#8A7D71", fontSize: 11 }} tickFormatter={(v) => `₹${v}`} />
+                  <Tooltip
+                    contentStyle={{ background: "#FFF", border: "1px solid #E8DFD1", borderRadius: 12 }}
+                    formatter={(v, name) => [`₹${v.toLocaleString("en-IN")}`, name]}
+                  />
+                  {Object.keys(catMap).map((cat) => (
+                    <Bar key={cat} dataKey={cat} stackId="a" fill={CAT_COLORS[cat] || "#8B5A2B"} radius={[0, 0, 0, 0]} name={cat} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Expenses table — THE BREAKDOWN */}
           <div className="bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">

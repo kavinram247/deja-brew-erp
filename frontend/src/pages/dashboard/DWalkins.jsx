@@ -10,6 +10,8 @@ export default function DWalkins() {
   const [range, setRange] = useState({ preset: "week", from: "", to: today });
   const [rows, setRows] = useState([]);
   const [hourly, setHourly] = useState([]);
+  const [dow, setDow] = useState([]);
+  const [dowMetric, setDowMetric] = useState("revenue");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,12 +23,14 @@ export default function DWalkins() {
     (async () => {
       setLoading(true);
       try {
-        const [{ data: analytics }, { data: hourlyData }] = await Promise.all([
+        const [{ data: analytics }, { data: hourlyData }, { data: dowData }] = await Promise.all([
           api.get(`/dashboard/analytics?from_date=${range.from}&to_date=${range.to}`),
           api.get(`/dashboard/hourly-breakdown?from_date=${range.from}&to_date=${range.to}`),
+          api.get(`/dashboard/dow-breakdown?from_date=${range.from}&to_date=${range.to}`),
         ]);
         setRows(analytics);
         setHourly(hourlyData);
+        setDow(dowData);
       } catch { toast.error("Failed to load"); }
       finally { setLoading(false); }
     })();
@@ -111,7 +115,7 @@ export default function DWalkins() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
+          <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-6">
             <h2 className="font-semibold text-[#2C241B] mb-4" style={{ fontFamily: "Outfit, sans-serif" }}>Daily Avg Party Size</h2>
             {dailyPartySize.every((d) => d.avgParty === 0) ? (
               <p className="text-[#8A7D71] py-10 text-center text-sm">No walk-in data</p>
@@ -127,6 +131,51 @@ export default function DWalkins() {
               </ResponsiveContainer>
             )}
           </div>
+
+          {/* Day-of-Week Breakdown */}
+          {dow.length > 0 && (() => {
+            const peakDow = dow.reduce((m, d) => d[dowMetric] > (m?.[dowMetric] || 0) ? d : m, null);
+            return (
+              <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Day-of-Week Breakdown</h2>
+                  <div className="flex rounded-xl overflow-hidden border border-amber-900/20">
+                    {[["revenue", "Revenue"], ["bills", "Bills"], ["walkins", "Walk-ins"]].map(([key, label]) => (
+                      <button key={key} onClick={() => setDowMetric(key)}
+                        className={`px-3 py-1.5 text-xs font-semibold transition-colors ${dowMetric === key ? "bg-[#8B5A2B] text-white" : "bg-white text-[#5C4F43] hover:bg-[#F6F3EC]"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {peakDow && peakDow[dowMetric] > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 mb-4 text-sm text-amber-800 font-medium">
+                    Busiest: <span className="font-bold">{peakDow.label}</span>
+                    {dowMetric === "revenue" && ` · ₹${peakDow.revenue.toLocaleString("en-IN")}`}
+                    {dowMetric === "bills" && ` · ${peakDow.bills} bills`}
+                    {dowMetric === "walkins" && ` · ${peakDow.walkins} walk-ins`}
+                  </div>
+                )}
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={dow}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD1" />
+                    <XAxis dataKey="label" tick={{ fill: "#8A7D71", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#8A7D71", fontSize: 11 }}
+                      tickFormatter={(v) => dowMetric === "revenue" ? `₹${(v / 1000).toFixed(0)}k` : `${v}`} />
+                    <Tooltip
+                      contentStyle={{ background: "#FFF", border: "1px solid #E8DFD1", borderRadius: 12 }}
+                      formatter={(v) => [dowMetric === "revenue" ? `₹${v.toLocaleString("en-IN")}` : v, dowMetric === "revenue" ? "Revenue" : dowMetric === "bills" ? "Bills" : "Walk-ins"]}
+                    />
+                    <Bar dataKey={dowMetric} radius={[6, 6, 0, 0]}>
+                      {dow.map((d, i) => (
+                        <Cell key={i} fill={d.label === peakDow?.label ? "#8B5A2B" : "#C9B99A"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
         </>
       )}
     </div>

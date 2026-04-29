@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Request
 from typing import Optional
 from datetime import datetime, timezone, timedelta
@@ -244,6 +245,143 @@ async def get_hourly_breakdown(
         }
         for h in range(24)
     ]
+
+
+@router.get("/tax-summary")
+async def get_tax_summary(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    db = get_db()
+    await get_current_user(request, db)
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    end = to_date or today
+    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
+
+    pipeline = [
+        {"$match": {"date": {"$gte": start, "$lte": end}, "is_voided": {"$ne": True}}},
+        {"$group": {
+            "_id": None,
+            "total_cgst": {"$sum": "$cgst"},
+            "total_sgst": {"$sum": "$sgst"},
+            "total_service_charge": {"$sum": "$service_charge"},
+            "taxable_amount": {"$sum": "$taxable_amount"},
+            "total_bills": {"$sum": 1},
+        }},
+    ]
+    result = await db.bills.aggregate(pipeline).to_list(1)
+    if not result:
+        return {"total_cgst": 0, "total_sgst": 0, "total_gst": 0, "total_service_charge": 0, "taxable_amount": 0, "total_bills": 0}
+    r = result[0]
+    r.pop("_id", None)
+    for k in ["total_cgst", "total_sgst", "total_service_charge", "taxable_amount"]:
+        r[k] = round(r.get(k, 0), 2)
+    r["total_gst"] = round(r["total_cgst"] + r["total_sgst"], 2)
+    return r
+
+
+@router.get("/void-stats")
+async def get_void_stats(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    db = get_db()
+    await get_current_user(request, db)
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    end = to_date or today
+    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
+
+    summary_pipe = [
+        {"$match": {"date": {"$gte": start, "$lte": end}}},
+        {"$group": {
+            "_id": None,
+            "total_bills": {"$sum": 1},
+            "voided_bills": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, 1, 0]}},
+            "voided_revenue": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, "$total", 0]}},
+        }},
+    ]
+    daily_pipe = [
+        {"$match": {"date": {"$gte": start, "$lte": end}}},
+        {"$group": {
+            "_id": "$date",
+            "total": {"$sum": 1},
+            "voided": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, 1, 0]}},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    summary_res, daily_res = await asyncio.gather(
+        db.bills.aggregate(summary_pipe).to_list(1),
+        db.bills.aggregate(daily_pipe).to_list(None),
+    )
+
+    if not summary_res:
+        return {"total_bills": 0, "voided_bills": 0, "voided_revenue": 0, "void_rate_pct": 0, "daily": []}
+    s = summary_res[0]
+    s.pop("_id", None)
+    s["voided_revenue"] = round(s.get("voided_revenue", 0), 2)
+    s["void_rate_pct"] = round(s["voided_bills"] / s["total_bills"] * 100, 2) if s["total_bills"] else 0
+    s["daily"] = [{"date": r["_id"], "total": r["total"], "voided": r["voided"]} for r in daily_res]
+    return s
+
+
+@router.get("/dow-breakdown")
+async def get_dow_breakdown(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    db = get_db()
+    await get_current_user(request, db)
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    end = to_date or today
+    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
+
+    bills_pipe = [
+        {"$match": {"date": {"$gte": start, "$lte": end}, "is_voided": {"$ne": True}, "created_at": {"$exists": True}}},
+        {"$addFields": {"dt": {"$dateFromString": {"dateString": "$created_at", "onError": None, "onNull": None}}}},
+        {"$match": {"dt": {"$ne": None}}},
+        {"$group": {
+            "_id": {"$dayOfWeek": {"date": "$dt", "timezone": "Asia/Kolkata"}},
+            "revenue": {"$sum": "$total"},
+            "bills": {"$sum": 1},
+        }},
+    ]
+    walkins_pipe = [
+        {"$match": {"date": {"$gte": start, "$lte": end}}},
+        {"$addFields": {"dt": {"$dateFromString": {"dateString": {"$concat": ["$date", "T12:00:00+05:30"]}}}}},
+        {"$group": {
+            "_id": {"$dayOfWeek": {"date": "$dt", "timezone": "Asia/Kolkata"}},
+            "walkins": {"$sum": 1},
+        }},
+    ]
+    bills_res, walkins_res = await asyncio.gather(
+        db.bills.aggregate(bills_pipe).to_list(None),
+        db.walkins.aggregate(walkins_pipe).to_list(None),
+    )
+
+    # MongoDB $dayOfWeek: 1=Sun, 2=Mon, ..., 7=Sat → remap to 0=Mon...6=Sun
+    LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    b_map = {r["_id"]: r for r in bills_res}
+    w_map = {r["_id"]: r for r in walkins_res}
+
+    result = []
+    for dow_0 in range(7):  # 0=Mon ... 6=Sun
+        mongo_dow = (dow_0 + 2) if dow_0 < 6 else 1  # Mon→2, Tue→3, ..., Sat→7, Sun→1
+        b = b_map.get(mongo_dow, {})
+        w = w_map.get(mongo_dow, {})
+        result.append({
+            "dow": dow_0,
+            "label": LABELS[dow_0],
+            "revenue": round(b.get("revenue", 0), 2),
+            "bills": b.get("bills", 0),
+            "walkins": w.get("walkins", 0),
+        })
+    return result
 
 
 @router.get("/discount-stats")

@@ -38,6 +38,7 @@ export default function Overview() {
   const [rows, setRows] = useState([]);
   const [compRows, setCompRows] = useState([]);
   const [discountStats, setDiscountStats] = useState(null);
+  const [taxStats, setTaxStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,13 +49,15 @@ export default function Overview() {
         const compareEnd = shiftYMD(range.from, -1);
         const compareStart = shiftYMD(compareEnd, -(spanDays - 1));
 
-        const [analyticsRes, discountRes] = await Promise.all([
+        const [analyticsRes, discountRes, taxRes] = await Promise.all([
           api.get(`/dashboard/analytics?from_date=${range.from}&to_date=${range.to}&compare_from=${compareStart}&compare_to=${compareEnd}`),
           api.get(`/dashboard/discount-stats?from_date=${range.from}&to_date=${range.to}`),
+          api.get(`/dashboard/tax-summary?from_date=${range.from}&to_date=${range.to}`),
         ]);
         setRows(analyticsRes.data.current || []);
         setCompRows(analyticsRes.data.comparison || []);
         setDiscountStats(discountRes.data);
+        setTaxStats(taxRes.data);
       } catch { toast.error("Failed to load analytics"); }
       finally { setLoading(false); }
     })();
@@ -138,6 +141,7 @@ export default function Overview() {
         { label: "Offline / Online", value: `₹${totals.offline.toLocaleString("en-IN")} / ₹${totals.online.toLocaleString("en-IN")}` },
         { label: "Bills / Walk-ins", value: `${totals.bills} / ${totals.walkins} (${totals.guests} guests)` },
         { label: "Cash / UPI", value: `₹${totals.cash.toLocaleString("en-IN")} / ₹${totals.upi.toLocaleString("en-IN")}` },
+        ...(taxStats ? [{ label: "Total GST (CGST+SGST)", value: `₹${taxStats.total_gst.toLocaleString("en-IN")}` }] : []),
       ],
     });
     toast.success("PDF ready");
@@ -249,6 +253,24 @@ export default function Overview() {
                   {discountStats.service_charge_count} of {discountStats.total_bills} bills · ₹{(discountStats.total_service_charge || 0).toLocaleString("en-IN")} total
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Tax summary */}
+          {taxStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {[
+                { label: "CGST Collected", value: `₹${(taxStats.total_cgst || 0).toLocaleString("en-IN")}`, sub: taxStats.taxable_amount > 0 ? `${((taxStats.total_cgst / taxStats.taxable_amount) * 100).toFixed(1)}% of taxable` : null },
+                { label: "SGST Collected", value: `₹${(taxStats.total_sgst || 0).toLocaleString("en-IN")}`, sub: taxStats.taxable_amount > 0 ? `${((taxStats.total_sgst / taxStats.taxable_amount) * 100).toFixed(1)}% of taxable` : null },
+                { label: "Total GST", value: `₹${(taxStats.total_gst || 0).toLocaleString("en-IN")}`, sub: `${taxStats.total_bills} bills` },
+                { label: "Service Charge", value: `₹${(taxStats.total_service_charge || 0).toLocaleString("en-IN")}`, sub: taxStats.taxable_amount > 0 ? `${((taxStats.total_service_charge / taxStats.taxable_amount) * 100).toFixed(1)}% of taxable` : null },
+              ].map((s) => (
+                <div key={s.label} className="bg-white rounded-2xl border border-amber-900/10 p-5 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
+                  <p className="text-[10px] text-[#8A7D71] uppercase tracking-widest font-medium">{s.label}</p>
+                  <p className="text-2xl font-bold text-[#3E5C46] mt-1" style={{ fontFamily: "Outfit, sans-serif" }}>{s.value}</p>
+                  {s.sub && <p className="text-xs text-[#8A7D71] mt-1">{s.sub}</p>}
+                </div>
+              ))}
             </div>
           )}
 
