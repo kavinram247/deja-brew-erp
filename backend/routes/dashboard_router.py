@@ -247,6 +247,119 @@ async def get_hourly_breakdown(
     ]
 
 
+@router.get("/party-size-revenue")
+async def get_party_size_revenue(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    db = get_db()
+    await get_current_user(request, db)
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    end = to_date or today
+    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
+
+    walkins_raw, bills_raw = await asyncio.gather(
+        db.walkins.find({"date": {"$gte": start, "$lte": end}}).to_list(None),
+        db.bills.find({"date": {"$gte": start, "$lte": end}, "is_voided": {"$ne": True}}).to_list(None),
+    )
+
+    def parse_ts(s):
+        if not s:
+            return None
+        try:
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except (ValueError, AttributeError):
+            return None
+
+    MATCH_WINDOW = 5400  # 90 minutes
+    BUCKETS = [
+        {"label": "Solo (1)",    "min": 1, "max": 1},
+        {"label": "Small (2–3)", "min": 2, "max": 3},
+        {"label": "Medium (4–6)","min": 4, "max": 6},
+        {"label": "Large (7+)",  "min": 7, "max": 9999},
+    ]
+
+    walkins_by_date = {}
+    for w in walkins_raw:
+        ts = parse_ts(w.get("time"))
+        if not ts:
+            continue
+        w["_ts"] = ts
+        walkins_by_date.setdefault(w.get("date", ""), []).append(w)
+
+    bills_sorted = sorted(
+        [b for b in bills_raw if parse_ts(b.get("created_at"))],
+        key=lambda b: parse_ts(b["created_at"]),
+    )
+
+    used_walkin_ids = set()
+    matched_pairs = []
+
+    for bill in bills_sorted:
+        bill_ts = parse_ts(bill["created_at"])
+        candidates = walkins_by_date.get(bill.get("date", ""), [])
+        best, best_diff = None, None
+        for w in candidates:
+            wid = str(w.get("_id", ""))
+            if wid in used_walkin_ids:
+                continue
+            diff = abs((bill_ts - w["_ts"]).total_seconds())
+            if diff <= MATCH_WINDOW and (best_diff is None or diff < best_diff):
+                best, best_diff = w, diff
+        if best:
+            used_walkin_ids.add(str(best.get("_id", "")))
+            matched_pairs.append({"total": bill.get("total", 0), "num_guests": int(best.get("num_guests", 1))})
+
+    bucket_wdata = {b["label"]: {"walkins": 0, "guests": 0} for b in BUCKETS}
+    for w in walkins_raw:
+        g = int(w.get("num_guests", 1))
+        for b in BUCKETS:
+            if b["min"] <= g <= b["max"]:
+                bucket_wdata[b["label"]]["walkins"] += 1
+                bucket_wdata[b["label"]]["guests"] += g
+                break
+
+    bucket_rdata = {b["label"]: {"bills": 0, "revenue": 0.0, "guests": 0} for b in BUCKETS}
+    for p in matched_pairs:
+        g = p["num_guests"]
+        for b in BUCKETS:
+            if b["min"] <= g <= b["max"]:
+                bucket_rdata[b["label"]]["bills"] += 1
+                bucket_rdata[b["label"]]["revenue"] += p["total"]
+                bucket_rdata[b["label"]]["guests"] += g
+                break
+
+    result = []
+    for b in BUCKETS:
+        label = b["label"]
+        wd = bucket_wdata[label]
+        rd = bucket_rdata[label]
+        result.append({
+            "label": label,
+            "min_guests": b["min"],
+            "max_guests": b["max"],
+            "walkins": wd["walkins"],
+            "guests": wd["guests"],
+            "matched_bills": rd["bills"],
+            "revenue": round(rd["revenue"], 2),
+            "avg_bill": round(rd["revenue"] / rd["bills"], 2) if rd["bills"] > 0 else 0,
+            "avg_per_person": round(rd["revenue"] / rd["guests"], 2) if rd["guests"] > 0 else 0,
+        })
+
+    return {
+        "buckets": result,
+        "match_rate": round(len(matched_pairs) / len(bills_raw), 2) if bills_raw else 0,
+        "total_walkins": len(walkins_raw),
+        "total_bills": len(bills_raw),
+        "matched_count": len(matched_pairs),
+    }
+
+
 @router.get("/tax-summary")
 async def get_tax_summary(
     request: Request,
