@@ -191,6 +191,12 @@ export default function DBilling() {
               {showBill.overall_discount > 0 && <div className="flex justify-between text-[#B84B4B]"><span>Discount</span><span>−₹{showBill.overall_discount?.toFixed(2)}</span></div>}
               <div className="flex justify-between"><span>CGST (2.5%)</span><span>₹{showBill.cgst?.toFixed(2)}</span></div>
               <div className="flex justify-between"><span>SGST (2.5%)</span><span>₹{showBill.sgst?.toFixed(2)}</span></div>
+              {showBill.service_charge_enabled && (
+                <div className="flex justify-between"><span>Service Charge (5%)</span><span>₹{(showBill.service_charge || 0).toFixed(2)}</span></div>
+              )}
+              {typeof showBill.round_off === "number" && Math.abs(showBill.round_off) > 0.001 && (
+                <div className="flex justify-between text-[#8A7D71]"><span>Round Off</span><span>{showBill.round_off >= 0 ? "+" : "−"}₹{Math.abs(showBill.round_off).toFixed(2)}</span></div>
+              )}
               <div className="flex justify-between font-bold text-[#8B5A2B] pt-1 border-t border-amber-900/10"><span>Total</span><span>₹{showBill.total?.toFixed(2)}</span></div>
             </div>
 
