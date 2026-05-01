@@ -282,52 +282,6 @@ async def get_tax_summary(
     return r
 
 
-@router.get("/void-stats")
-async def get_void_stats(
-    request: Request,
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-):
-    db = get_db()
-    await get_current_user(request, db)
-
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    end = to_date or today
-    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
-
-    summary_pipe = [
-        {"$match": {"date": {"$gte": start, "$lte": end}}},
-        {"$group": {
-            "_id": None,
-            "total_bills": {"$sum": 1},
-            "voided_bills": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, 1, 0]}},
-            "voided_revenue": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, "$total", 0]}},
-        }},
-    ]
-    daily_pipe = [
-        {"$match": {"date": {"$gte": start, "$lte": end}}},
-        {"$group": {
-            "_id": "$date",
-            "total": {"$sum": 1},
-            "voided": {"$sum": {"$cond": [{"$eq": ["$is_voided", True]}, 1, 0]}},
-        }},
-        {"$sort": {"_id": 1}},
-    ]
-    summary_res, daily_res = await asyncio.gather(
-        db.bills.aggregate(summary_pipe).to_list(1),
-        db.bills.aggregate(daily_pipe).to_list(None),
-    )
-
-    if not summary_res:
-        return {"total_bills": 0, "voided_bills": 0, "voided_revenue": 0, "void_rate_pct": 0, "daily": []}
-    s = summary_res[0]
-    s.pop("_id", None)
-    s["voided_revenue"] = round(s.get("voided_revenue", 0), 2)
-    s["void_rate_pct"] = round(s["voided_bills"] / s["total_bills"] * 100, 2) if s["total_bills"] else 0
-    s["daily"] = [{"date": r["_id"], "total": r["total"], "voided": r["voided"]} for r in daily_res]
-    return s
-
-
 @router.get("/dow-breakdown")
 async def get_dow_breakdown(
     request: Request,

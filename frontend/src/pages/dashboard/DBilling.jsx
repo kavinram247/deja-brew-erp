@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download, FileText, ChevronDown } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Receipt, ChevronLeft, ChevronRight, Eye, X, Download, FileText } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
-import DateRangeToolbar from "../../components/DateRangeToolbar";
 import { todayYMD, shiftYMD } from "../../utils/date";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
@@ -21,11 +19,6 @@ export default function DBilling() {
   const hasLoaded = useRef(false);
   const [showBill, setShowBill] = useState(null);
 
-  const [showVoids, setShowVoids] = useState(false);
-  const [voidRange, setVoidRange] = useState({ preset: "month", from: today.slice(0, 8) + "01", to: today });
-  const [voidStats, setVoidStats] = useState(null);
-  const [voidLoading, setVoidLoading] = useState(false);
-
   const load = async (d = date) => {
     setLoading(true);
     try { const { data } = await api.get(`/bills?date_str=${d}`); setBills(data); hasLoaded.current = true; }
@@ -34,16 +27,6 @@ export default function DBilling() {
   };
 
   useEffect(() => { load(date); }, [date]); // eslint-disable-line
-
-  useEffect(() => {
-    if (!showVoids) return;
-    (async () => {
-      setVoidLoading(true);
-      try { const { data } = await api.get(`/dashboard/void-stats?from_date=${voidRange.from}&to_date=${voidRange.to}`); setVoidStats(data); }
-      catch { toast.error("Failed to load void stats"); }
-      finally { setVoidLoading(false); }
-    })();
-  }, [showVoids, voidRange.from, voidRange.to]); // eslint-disable-line
 
   const changeDate = (delta) => {
     setDate(shiftYMD(date, delta));
@@ -180,67 +163,6 @@ export default function DBilling() {
               </table>
             </div>
           )}
-      </div>
-
-      {/* Void Analysis */}
-      <div className="mt-6 bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.04)]">
-        <button
-          onClick={() => setShowVoids((v) => !v)}
-          className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#8B5A2B]/5 rounded-2xl transition-colors"
-          data-testid="toggle-void-analysis">
-          <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Void Analysis</h2>
-          <ChevronDown size={16} className={`text-[#8A7D71] transition-transform ${showVoids ? "rotate-180" : ""}`} />
-        </button>
-        {showVoids && (
-          <div className="px-5 pb-6 border-t border-amber-900/10 pt-4">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <p className="text-xs text-[#8A7D71]">Analyse voided bills over a date range</p>
-              <DateRangeToolbar {...voidRange} onChange={setVoidRange} />
-            </div>
-            {voidLoading ? <div className="text-center text-[#8A7D71] py-8">Loading...</div> : voidStats && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-                  {[
-                    {
-                      label: "Void Rate",
-                      value: `${voidStats.void_rate_pct.toFixed(1)}%`,
-                      color: voidStats.void_rate_pct > 3 ? "#B84B4B" : "#3E5C46",
-                      sub: voidStats.void_rate_pct > 3 ? "Above 3% threshold" : "Within normal range",
-                    },
-                    { label: "Voided Bills", value: voidStats.voided_bills, color: "#8B5A2B", sub: `of ${voidStats.total_bills} total` },
-                    { label: "Revenue Lost", value: `₹${voidStats.voided_revenue.toLocaleString("en-IN")}`, color: "#B84B4B", sub: "from voided bills" },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-[#F6F3EC] rounded-xl p-4">
-                      <p className="text-[10px] text-[#8A7D71] uppercase tracking-widest font-medium">{s.label}</p>
-                      <p className="text-2xl font-bold mt-1" style={{ color: s.color, fontFamily: "Outfit, sans-serif" }}>{s.value}</p>
-                      <p className="text-xs text-[#8A7D71] mt-1">{s.sub}</p>
-                    </div>
-                  ))}
-                </div>
-                {voidStats.daily.length > 1 && (
-                  <div>
-                    <p className="text-xs font-semibold text-[#5C4F43] mb-3">Daily Void Rate (%)</p>
-                    <ResponsiveContainer width="100%" height={160}>
-                      <LineChart data={voidStats.daily.map((d) => ({
-                        date: d.date,
-                        rate: d.total > 0 ? +((d.voided / d.total) * 100).toFixed(1) : 0,
-                      }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD1" />
-                        <XAxis dataKey="date" tick={{ fill: "#8A7D71", fontSize: 10 }} />
-                        <YAxis tick={{ fill: "#8A7D71", fontSize: 10 }} unit="%" />
-                        <Tooltip
-                          contentStyle={{ background: "#FFF", border: "1px solid #E8DFD1", borderRadius: 12 }}
-                          formatter={(v) => [`${v}%`, "Void Rate"]}
-                        />
-                        <Line type="monotone" dataKey="rate" stroke="#B84B4B" strokeWidth={2} dot={false} name="Void Rate" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Detail Modal */}
