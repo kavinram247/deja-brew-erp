@@ -51,6 +51,10 @@ api_router = APIRouter(prefix="/api")
 async def root():
     return {"message": "Deja Brew ERP API v2"}
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 app.include_router(api_router)
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(walkins_router, prefix="/api/walkins", tags=["walkins"])
