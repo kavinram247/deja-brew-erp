@@ -43,11 +43,12 @@ export default function Billing() {
 
   const cartMap = useMemo(() => Object.fromEntries(cart.map((c) => [c.id, c.qty])), [cart]);
 
-  const addToCart = (item) => {
+  const toggleItem = (item) => {
     setCart((p) => {
       const ex = p.find((c) => c.id === item.id);
-      if (ex) return p.map((c) => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
-      return [...p, { id: item.id, name: item.name, price: item.price, qty: 1, discPct: 0 }];
+      if (!ex) return [...p, { id: item.id, name: item.name, price: item.price, qty: 1, discPct: 0 }];
+      if (ex.qty <= 1) return p.filter((c) => c.id !== item.id);
+      return p.map((c) => c.id === item.id ? { ...c, qty: c.qty - 1 } : c);
     });
   };
 
@@ -173,7 +174,7 @@ export default function Billing() {
                 {q ? `No items match "${search}"` : "No items — add from Menu"}
               </div>
             ) : filtered.map((item) => (
-              <MenuItemButton key={item.id} item={item} qty={cartMap[item.id] || 0} onAdd={addToCart} />
+              <MenuItemButton key={item.id} item={item} qty={cartMap[item.id] || 0} onAdd={toggleItem} />
             ))}
           </div>
         </div>

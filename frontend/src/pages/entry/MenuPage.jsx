@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit2, UtensilsCrossed, ChefHat, X } from "lucide-react";
+import { Plus, Trash2, Edit2, UtensilsCrossed, ChefHat, X, Search } from "lucide-react";
 
 const CATS = ["Coffee", "Tea", "Beverages", "Breakfast", "Snacks", "Mains", "Desserts", "Other"];
 
@@ -22,6 +22,7 @@ export default function MenuPage() {
 
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("All");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -38,7 +39,10 @@ export default function MenuPage() {
   useEffect(() => { load(); }, []);
 
   const cats = ["All", ...new Set(items.map((i) => i.category))];
-  const filtered = filter === "All" ? items : items.filter((i) => i.category === filter);
+  const q = search.trim().toLowerCase();
+  const filtered = items
+    .filter((i) => filter === "All" || i.category === filter)
+    .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
 
   const openAdd = () => { setItemForm(EMPTY_ITEM); setEditItem(null); setShowItemForm(true); };
   const openEdit = (item) => {
@@ -144,7 +148,20 @@ export default function MenuPage() {
           <h1 className="text-3xl font-bold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Menu & Recipes</h1>
           <p className="text-[#8A7D71] text-sm mt-1">{items.length} items · {Object.keys(recipes).length} recipes mapped</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7D71]" />
+            <input
+              type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search items..."
+              className="pl-9 pr-8 py-1.5 rounded-full bg-white border border-amber-900/20 text-xs focus:outline-none focus:border-[#8B5A2B] focus:ring-2 focus:ring-[#8B5A2B]/15 w-44"
+              data-testid="menu-search-input" />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A7D71] hover:text-[#5C4F43]">
+                <X size={14} />
+              </button>
+            )}
+          </div>
           {cats.map((c) => (
             <button key={c} onClick={() => setFilter(c)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
