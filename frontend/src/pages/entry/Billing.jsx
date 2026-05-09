@@ -14,6 +14,7 @@ export default function Billing() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [overallDisc, setOverallDisc] = useState("");
+  const [overallDiscPct, setOverallDiscPct] = useState("");
   const [paymentMode, setPaymentMode] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
@@ -59,7 +60,7 @@ export default function Billing() {
 
   const cartLines = cart.map((c) => ({ ...c, subtotal: c.price * c.qty }));
   const subtotal = cartLines.reduce((s, c) => s + c.subtotal, 0);
-  const disc = parseFloat(overallDisc) || 0;
+  const disc = Math.min(subtotal, (parseFloat(overallDisc) || 0) + subtotal * ((parseFloat(overallDiscPct) || 0) / 100));
   const taxable = Math.max(0, subtotal - disc);
   const cgst = taxable * TAX;
   const sgst = taxable * TAX;
@@ -101,7 +102,7 @@ export default function Billing() {
           });
         } catch (_) { /* non-blocking */ }
       }
-      setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
+      setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setOverallDiscPct(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
       setLogWalkin(false); setWalkinGuests(1); setServiceCharge(false);
       toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
       if (printAfter === "bill") {
@@ -232,11 +233,19 @@ export default function Billing() {
           <div className="border-t border-amber-900/10 flex flex-col min-h-0">
             <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: "45vh" }}>
               {/* Overall discount */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-[#8A7D71] w-20 shrink-0">Overall Disc (₹)</label>
-                <input type="number" step="0.01" value={overallDisc} onChange={(e) => setOverallDisc(e.target.value)} placeholder="0"
-                  className="flex-1 rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
-                  data-testid="overall-discount-input" />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-[#8A7D71] block mb-1">Discount (₹)</label>
+                  <input type="number" step="0.01" min="0" value={overallDisc} onChange={(e) => setOverallDisc(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                    data-testid="overall-discount-input" />
+                </div>
+                <div>
+                  <label className="text-xs text-[#8A7D71] block mb-1">Discount (%)</label>
+                  <input type="number" step="0.1" min="0" max="100" value={overallDiscPct} onChange={(e) => setOverallDiscPct(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                    data-testid="overall-discount-pct-input" />
+                </div>
               </div>
 
               {/* Tax breakdown */}
