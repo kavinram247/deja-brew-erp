@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
 import { useDebounce } from "../../hooks/useDebounce";
 import { toast } from "sonner";
-import { Users2, Phone, Repeat, Star, Download, FileText, Search, X } from "lucide-react";
+import { Users2, Repeat, Download, FileText, Search, X } from "lucide-react";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
 
@@ -108,16 +108,6 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <StatCard icon={Users2} label="Total" value={stats.total} color="#8B5A2B" testid="cust-total" />
-        <StatCard icon={Repeat} label="Repeat" value={stats.repeat}
-          sub={`${stats.total > 0 ? ((stats.repeat / stats.total) * 100).toFixed(0) : 0}%`} color="#3E5C46" testid="cust-repeat" />
-        <StatCard icon={Phone} label="With Phone" value={stats.withPhone} color="#D48B3D" testid="cust-phone" />
-        <StatCard icon={Star} label="Total Visits" value={stats.totalVisits} color="#C06C4C" testid="cust-visits" />
-        <StatCard icon={Users2} label="Lifetime ₹" value={`₹${stats.totalSpent.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`} color="#5C4F43" testid="cust-spent" />
-      </div>
-
       {/* Search + Filter + Sort row */}
       <div className="bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-4">
         <div className="px-5 py-3 flex flex-wrap items-center gap-3 border-b border-amber-900/10">
@@ -198,17 +188,3 @@ export default function Customers() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, sub, color, testid }) {
-  return (
-    <div className="bg-white rounded-2xl border border-amber-900/10 p-5 shadow-[0_4px_24px_rgba(44,36,27,0.04)]" data-testid={testid}>
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}15`, color }}>
-          <Icon size={14} />
-        </div>
-        <p className="text-[10px] text-[#8A7D71] uppercase tracking-widest font-medium">{label}</p>
-      </div>
-      <p className="text-2xl font-bold mt-1" style={{ color, fontFamily: "Outfit, sans-serif" }}>{value}</p>
-      {sub && <p className="text-xs text-[#8A7D71] mt-0.5">{sub}</p>}
-    </div>
-  );
-}

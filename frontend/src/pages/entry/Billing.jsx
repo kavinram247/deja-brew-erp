@@ -17,7 +17,6 @@ export default function Billing() {
   const [paymentMode, setPaymentMode] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
-  const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 200);
   const [submitting, setSubmitting] = useState(false);
@@ -34,11 +33,9 @@ export default function Billing() {
     api.get("/menu?active_only=true").then((r) => setMenuItems(r.data)).catch(() => toast.error("Failed to load menu"));
   }, []);
 
-  const categories = ["All", ...new Set(menuItems.map((i) => i.category))];
   const q = debouncedSearch.trim().toLowerCase();
   const filtered = menuItems
     .filter((i) => i.active)
-    .filter((i) => category === "All" || i.category === category)
     .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
 
   const cartMap = useMemo(() => Object.fromEntries(cart.map((c) => [c.id, c.qty])), [cart]);
@@ -46,7 +43,7 @@ export default function Billing() {
   const toggleItem = (item) => {
     setCart((p) => {
       const ex = p.find((c) => c.id === item.id);
-      if (!ex) return [...p, { id: item.id, name: item.name, price: item.price, qty: 1, discPct: 0 }];
+      if (!ex) return [...p, { id: item.id, name: item.name, price: item.price, qty: 1 }];
       if (ex.qty <= 1) return p.filter((c) => c.id !== item.id);
       return p.map((c) => c.id === item.id ? { ...c, qty: c.qty - 1 } : c);
     });
@@ -60,9 +57,7 @@ export default function Billing() {
     });
   };
 
-  const setDisc = (id, val) => setCart((p) => p.map((c) => c.id === id ? { ...c, discPct: Math.min(100, Math.max(0, parseFloat(val) || 0)) } : c));
-
-  const cartLines = cart.map((c) => ({ ...c, gross: c.price * c.qty, itemDisc: c.price * c.qty * c.discPct / 100, subtotal: c.price * c.qty * (1 - c.discPct / 100) }));
+  const cartLines = cart.map((c) => ({ ...c, subtotal: c.price * c.qty }));
   const subtotal = cartLines.reduce((s, c) => s + c.subtotal, 0);
   const disc = parseFloat(overallDisc) || 0;
   const taxable = Math.max(0, subtotal - disc);
@@ -89,7 +84,7 @@ export default function Billing() {
       const { data } = await api.post("/bills", {
         customer_name: customerName,
         customer_phone: customerPhone || null,
-        items: cartLines.map((c) => ({ menu_item_id: c.id, name: c.name, price: c.price, quantity: c.qty, item_discount_pct: c.discPct })),
+        items: cartLines.map((c) => ({ menu_item_id: c.id, name: c.name, price: c.price, quantity: c.qty })),
         overall_discount: disc,
         payment_mode: paymentMode,
         cash_amount: cash, upi_amount: upi,
@@ -161,12 +156,6 @@ export default function Billing() {
                 </button>
               )}
             </div>
-            {categories.map((cat) => (
-              <button key={cat} onClick={() => setCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${category === cat ? "bg-[#8B5A2B] text-white" : "bg-white border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10"}`}
-                data-testid={`cat-${cat.toLowerCase().replace(/\s+/g, "-")}`}>{cat}
-              </button>
-            ))}
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 auto-rows-min content-start gap-1.5 overflow-y-auto flex-1 pb-2">
             {filtered.length === 0 ? (
@@ -226,7 +215,7 @@ export default function Billing() {
             {cart.length === 0 ? <div className="text-center text-[#8A7D71] text-sm py-6">Tap items to add</div>
               : cartLines.map((item) => (
                 <div key={item.id} className="bg-[#F6F3EC] rounded-xl p-2.5">
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2">
                     <p className="flex-1 text-sm font-medium text-[#2C241B] truncate">{item.name}</p>
                     <div className="flex items-center gap-1">
                       <button onClick={() => adjustQty(item.id, -1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-red-50 text-[#2C241B]" data-testid={`dec-${item.id}`}><Minus size={10} /></button>
@@ -234,12 +223,6 @@ export default function Billing() {
                       <button onClick={() => adjustQty(item.id, 1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-green-50 text-[#2C241B]" data-testid={`inc-${item.id}`}><Plus size={10} /></button>
                     </div>
                     <span className="text-sm font-bold text-[#8B5A2B] w-14 text-right">₹{item.subtotal.toFixed(0)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-[#8A7D71]">Discount %</label>
-                    <input type="number" min="0" max="100" value={item.discPct || ""} onChange={(e) => setDisc(item.id, e.target.value)}
-                      placeholder="0" className="w-14 rounded-lg border border-amber-900/20 bg-white px-2 py-0.5 text-xs focus:outline-none focus:border-[#8B5A2B] text-center" data-testid={`disc-${item.id}`} />
-                    {item.discPct > 0 && <span className="text-xs text-[#B84B4B]">−₹{item.itemDisc.toFixed(0)}</span>}
                   </div>
                 </div>
               ))}

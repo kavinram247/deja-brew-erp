@@ -21,7 +21,6 @@ export default function MenuPage() {
   const [recipeIngredients, setRecipeIngredients] = useState([]);
 
   const [saving, setSaving] = useState(false);
-  const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
 
   const load = async () => {
@@ -38,11 +37,8 @@ export default function MenuPage() {
 
   useEffect(() => { load(); }, []);
 
-  const cats = ["All", ...new Set(items.map((i) => i.category))];
   const q = search.trim().toLowerCase();
-  const filtered = items
-    .filter((i) => filter === "All" || i.category === filter)
-    .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
+  const filtered = !q ? items : items.filter((i) => i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
 
   const openAdd = () => { setItemForm(EMPTY_ITEM); setEditItem(null); setShowItemForm(true); };
   const openEdit = (item) => {
@@ -162,13 +158,6 @@ export default function MenuPage() {
               </button>
             )}
           </div>
-          {cats.map((c) => (
-            <button key={c} onClick={() => setFilter(c)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                filter === c ? "bg-[#8B5A2B] text-white" : "bg-white border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10"
-              }`}
-              data-testid={`menu-filter-${c.toLowerCase()}`}>{c}</button>
-          ))}
           <button onClick={openAdd}
             className="flex items-center gap-2 bg-[#8B5A2B] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822] ml-2"
             data-testid="add-menu-btn">
