@@ -138,11 +138,17 @@ async def get_stats(request: Request, date_str: Optional[str] = None):
         b["id"] = str(b.pop("_id"))
 
     month_start = datetime.now(timezone.utc).strftime("%Y-%m-01")
-    m_bills = await db.bills.find(
-        {"date": {"$gte": month_start}, "is_voided": {"$ne": True}}
-    ).to_list(5000)
-    m_online = await db.online_sales.find({"date": {"$gte": month_start}}).to_list(5000)
-    monthly_revenue = sum(b.get("total", 0) for b in m_bills) + sum(o.get("net_sales", 0) for o in m_online)
+    m_bills_agg, m_online_agg = await asyncio.gather(
+        db.bills.aggregate([
+            {"$match": {"date": {"$gte": month_start}, "is_voided": {"$ne": True}}},
+            {"$group": {"_id": None, "total": {"$sum": "$total"}}},
+        ]).to_list(1),
+        db.online_sales.aggregate([
+            {"$match": {"date": {"$gte": month_start}}},
+            {"$group": {"_id": None, "total": {"$sum": "$net_sales"}}},
+        ]).to_list(1),
+    )
+    monthly_revenue = (m_bills_agg[0]["total"] if m_bills_agg else 0) + (m_online_agg[0]["total"] if m_online_agg else 0)
 
     return {
         "date": today,
