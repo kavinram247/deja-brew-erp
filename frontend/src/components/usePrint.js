@@ -1,42 +1,55 @@
-import React, { useState, useCallback } from "react";
-import { PrintableReceipt } from "./PrintableReceipt";
+import { useCallback } from "react";
+import { generateReceiptHtml } from "./PrintableReceipt";
 
 /**
- * Portal-less print host that mounts hidden, populates with bill + kind,
- * then triggers window.print().
- * Sets document.title to the bill number so PDF "Save as" defaults to
- * "<bill_number>.pdf" instead of the app title.
+ * Prints a self-contained receipt HTML string via a hidden iframe.
+ * The main page stays fully visible — no visibility-toggle flash.
+ * Each call creates a fresh iframe, prints it, then removes it.
  */
-export function usePrint() {
-  const [bill, setBill] = useState(null);
-  const [kind, setKind] = useState("bill");
+function printHtml(html, docTitle) {
+  const frame = document.createElement("iframe");
+  frame.style.cssText =
+    "position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;opacity:0;pointer-events:none;";
+  frame.setAttribute("aria-hidden", "true");
+  document.body.appendChild(frame);
 
-  const trigger = useCallback((b, k) => {
-    setBill(b);
-    setKind(k);
-    setTimeout(() => {
-      const prevTitle = document.title;
-      const fname = b?.bill_number ? `${b.bill_number}${k === "kot" ? "-KOT" : ""}` : "Deja Brew";
-      document.title = fname;
-      const onAfter = () => {
-        document.title = prevTitle;
-        window.removeEventListener("afterprint", onAfter);
-      };
-      window.addEventListener("afterprint", onAfter);
-      window.print();
-      // Fallback in case afterprint never fires (some browsers)
-      setTimeout(() => { document.title = prevTitle; }, 4000);
-    }, 60);
+  const prevTitle = document.title;
+  document.title = docTitle;
+
+  frame.contentDocument.open();
+  frame.contentDocument.write(html);
+  frame.contentDocument.close();
+
+  const cleanup = () => {
+    document.title = prevTitle;
+    try { document.body.removeChild(frame); } catch (_) {}
+  };
+
+  setTimeout(() => {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+    frame.contentWindow.addEventListener("afterprint", cleanup, { once: true });
+    setTimeout(cleanup, 30000); // safety fallback if afterprint never fires
+  }, 80);
+}
+
+export function usePrint() {
+  const printBill = useCallback((bill) => {
+    printHtml(
+      generateReceiptHtml(bill, "bill"),
+      bill?.bill_number || "Deja-Brew"
+    );
   }, []);
 
-  const printBill = useCallback((b) => trigger(b, "bill"), [trigger]);
-  const printKot = useCallback((b) => trigger(b, "kot"), [trigger]);
+  const printKot = useCallback((bill) => {
+    printHtml(
+      generateReceiptHtml(bill, "kot"),
+      `${bill?.bill_number || "KOT"}-KOT`
+    );
+  }, []);
 
-  const PrintHost = useCallback(() => (
-    <div className="print-root" aria-hidden>
-      <PrintableReceipt bill={bill} kind={kind} />
-    </div>
-  ), [bill, kind]);
+  // Kept for API compatibility — renders nothing
+  const PrintHost = useCallback(() => null, []);
 
   return { printBill, printKot, PrintHost };
 }
