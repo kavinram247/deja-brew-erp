@@ -17,8 +17,23 @@ class FloatExpenseCreate(BaseModel):
     category: str
 
 
+class FloatExpenseUpdate(BaseModel):
+    description: str
+    amount: float
+    category: str
+
+
 def calc_closing(opening: float, expenses: list) -> float:
     return round(opening - sum(e.get("amount", 0) for e in expenses), 2)
+
+
+def resolve_date(date_str: Optional[str]) -> str:
+    """Pick the target day, defaulting to today. Reject future dates."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    target = date_str or today
+    if target > today:
+        raise HTTPException(400, "Cannot edit a future date")
+    return target
 
 
 def serialize(doc):
@@ -73,11 +88,11 @@ async def get_by_date(request: Request, date_str: Optional[str] = None):
 
 
 @router.post("/expenses")
-async def add_expense(input: FloatExpenseCreate, request: Request):
+async def add_expense(input: FloatExpenseCreate, request: Request, date_str: Optional[str] = None):
     db = get_db()
     await get_current_user(request, db)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    doc = await get_or_create(db, today)
+    target = resolve_date(date_str)
+    doc = await get_or_create(db, target)
 
     expense = {
         "id": str(uuid.uuid4()),
@@ -90,26 +105,52 @@ async def add_expense(input: FloatExpenseCreate, request: Request):
     new_closing = calc_closing(doc["opening_balance"], updated_expenses)
 
     await db.float_days.update_one(
-        {"date": today},
+        {"date": target},
         {"$push": {"expenses": expense}, "$set": {"closing_balance": new_closing}},
     )
-    updated = await db.float_days.find_one({"date": today})
+    updated = await db.float_days.find_one({"date": target})
+    return serialize(updated)
+
+
+@router.put("/expenses/{expense_id}")
+async def update_expense(expense_id: str, input: FloatExpenseUpdate, request: Request, date_str: Optional[str] = None):
+    db = get_db()
+    await get_current_user(request, db)
+    target = resolve_date(date_str)
+    doc = await get_or_create(db, target)
+
+    expenses = doc.get("expenses", [])
+    if not any(e["id"] == expense_id for e in expenses):
+        raise HTTPException(404, "Expense not found")
+
+    updated_expenses = [
+        {**e, "description": input.description, "amount": input.amount, "category": input.category}
+        if e["id"] == expense_id else e
+        for e in expenses
+    ]
+    new_closing = calc_closing(doc["opening_balance"], updated_expenses)
+
+    await db.float_days.update_one(
+        {"date": target},
+        {"$set": {"expenses": updated_expenses, "closing_balance": new_closing}},
+    )
+    updated = await db.float_days.find_one({"date": target})
     return serialize(updated)
 
 
 @router.delete("/expenses/{expense_id}")
-async def delete_expense(expense_id: str, request: Request):
+async def delete_expense(expense_id: str, request: Request, date_str: Optional[str] = None):
     db = get_db()
     await get_current_user(request, db)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    doc = await get_or_create(db, today)
+    target = resolve_date(date_str)
+    doc = await get_or_create(db, target)
 
     remaining = [e for e in doc.get("expenses", []) if e["id"] != expense_id]
     new_closing = calc_closing(doc["opening_balance"], remaining)
 
     await db.float_days.update_one(
-        {"date": today},
+        {"date": target},
         {"$set": {"expenses": remaining, "closing_balance": new_closing}},
     )
-    updated = await db.float_days.find_one({"date": today})
+    updated = await db.float_days.find_one({"date": target})
     return serialize(updated)

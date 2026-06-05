@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Plus, Trash2, Wallet, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Wallet, ChevronLeft, ChevronRight, Pencil, Check, X } from "lucide-react";
 import ThemeDatePicker from "../../components/ThemeDatePicker";
 import { todayYMD, shiftYMD } from "../../utils/date";
 
@@ -20,6 +20,10 @@ export default function Purchases() {
   const [date, setDate] = useState(() => todayYMD());
   const today = todayYMD();
   const isToday = date === today;
+  // Inline edit state for an existing expense
+  const [editId, setEditId] = useState(null);
+  const [editDesc, setEditDesc] = useState(""); const [editAmount, setEditAmount] = useState(""); const [editCat, setEditCat] = useState("Raw Materials");
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -39,7 +43,7 @@ export default function Purchases() {
     if (!desc.trim() || !amount || parseFloat(amount) <= 0) { toast.error("Fill in all fields"); return; }
     setSaving(true);
     try {
-      const { data } = await api.post("/float/expenses", { description: desc, amount: parseFloat(amount), category: cat });
+      const { data } = await api.post(`/float/expenses?date_str=${date}`, { description: desc, amount: parseFloat(amount), category: cat });
       setFloatData(data); setDesc(""); setAmount(""); setCat("Raw Materials"); setShowForm(false);
       toast.success("Expense recorded");
     } catch { toast.error("Failed to save"); }
@@ -48,8 +52,26 @@ export default function Purchases() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Remove this expense?")) return;
-    try { const { data } = await api.delete(`/float/expenses/${id}`); setFloatData(data); toast.success("Removed"); }
+    try { const { data } = await api.delete(`/float/expenses/${id}?date_str=${date}`); setFloatData(data); toast.success("Removed"); }
     catch { toast.error("Failed"); }
+  };
+
+  const startEdit = (exp) => {
+    setEditId(exp.id); setEditDesc(exp.description); setEditAmount(String(exp.amount)); setEditCat(exp.category);
+    setShowForm(false);
+  };
+
+  const cancelEdit = () => { setEditId(null); };
+
+  const handleEditSave = async (id) => {
+    if (!editDesc.trim() || !editAmount || parseFloat(editAmount) <= 0) { toast.error("Fill in all fields"); return; }
+    setEditSaving(true);
+    try {
+      const { data } = await api.put(`/float/expenses/${id}?date_str=${date}`, { description: editDesc, amount: parseFloat(editAmount), category: editCat });
+      setFloatData(data); setEditId(null);
+      toast.success("Expense updated");
+    } catch { toast.error("Failed to update"); }
+    finally { setEditSaving(false); }
   };
 
   const spent = floatData ? floatData.opening_balance - floatData.closing_balance : 0;
@@ -102,13 +124,11 @@ export default function Purchases() {
               <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>
                 Expenses ({floatData?.expenses?.length || 0})
               </h2>
-              {isToday && (
-                <button onClick={() => setShowForm(!showForm)}
-                  className="flex items-center gap-2 bg-[#8B5A2B] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822]"
-                  data-testid="add-expense-btn">
-                  <Plus size={14} /> Add Expense
-                </button>
-              )}
+              <button onClick={() => setShowForm(!showForm)}
+                className="flex items-center gap-2 bg-[#8B5A2B] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822]"
+                data-testid="add-expense-btn">
+                <Plus size={14} /> Add Expense
+              </button>
             </div>
 
             {showForm && (
@@ -156,25 +176,56 @@ export default function Purchases() {
             ) : (
               <div className="divide-y divide-amber-900/5">
                 {floatData.expenses.map((exp, i) => (
-                  <div key={exp.id} className="flex items-center justify-between px-5 py-3 hover:bg-[#8B5A2B]/5 transition-colors"
-                    data-testid={`expense-row-${i}`}>
-                    <div>
-                      <p className="text-sm font-medium text-[#2C241B]">{exp.description}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{exp.category}</span>
-                        <span className="text-xs text-[#8A7D71]">{fmt(exp.timestamp)}</span>
+                  editId === exp.id ? (
+                    <div key={exp.id} className="px-5 py-3 bg-[#F6F3EC]" data-testid={`expense-row-${i}`}>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="Description"
+                          className="col-span-2 rounded-xl border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                          data-testid={`edit-desc-${i}`} />
+                        <input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="Amount"
+                          className="rounded-xl border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                          data-testid={`edit-amount-${i}`} />
+                        <select value={editCat} onChange={(e) => setEditCat(e.target.value)}
+                          className="rounded-xl border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                          data-testid={`edit-category-${i}`}>
+                          {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button onClick={cancelEdit}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl border border-amber-900/20 text-sm text-[#5C4F43]">
+                          <X size={13} /> Cancel
+                        </button>
+                        <button onClick={() => handleEditSave(exp.id)} disabled={editSaving}
+                          className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl bg-[#8B5A2B] text-white text-sm font-semibold disabled:opacity-50"
+                          data-testid={`edit-save-${i}`}>
+                          <Check size={13} /> {editSaving ? "Saving..." : "Save"}
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-[#B84B4B]">−₹{exp.amount.toLocaleString("en-IN")}</span>
-                      {isToday && (
+                  ) : (
+                    <div key={exp.id} className="flex items-center justify-between px-5 py-3 hover:bg-[#8B5A2B]/5 transition-colors"
+                      data-testid={`expense-row-${i}`}>
+                      <div>
+                        <p className="text-sm font-medium text-[#2C241B]">{exp.description}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{exp.category}</span>
+                          <span className="text-xs text-[#8A7D71]">{fmt(exp.timestamp)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-[#B84B4B]">−₹{exp.amount.toLocaleString("en-IN")}</span>
+                        <button onClick={() => startEdit(exp)}
+                          className="text-[#8A7D71] hover:text-[#8B5A2B]" data-testid={`edit-expense-${i}`}>
+                          <Pencil size={13} />
+                        </button>
                         <button onClick={() => handleDelete(exp.id)}
                           className="text-[#8A7D71] hover:text-[#B84B4B]" data-testid={`delete-expense-${i}`}>
                           <Trash2 size={13} />
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )
                 ))}
                 <div className="flex justify-between px-5 py-3 bg-[#F6F3EC] font-bold text-sm">
                   <span className="text-[#2C241B]">Total Spent</span>
