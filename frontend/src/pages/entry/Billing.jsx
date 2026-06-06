@@ -18,6 +18,7 @@ export default function Billing() {
   const [paymentMode, setPaymentMode] = useState("cash");
   const [cashAmount, setCashAmount] = useState("");
   const [upiAmount, setUpiAmount] = useState("");
+  const [cashReceived, setCashReceived] = useState("");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 200);
   const [submitting, setSubmitting] = useState(false);
@@ -102,7 +103,7 @@ export default function Billing() {
           });
         } catch (_) { /* non-blocking */ }
       }
-      setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setOverallDiscPct(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount("");
+      setCart([]); setCustomerName(""); setCustomerPhone(""); setOverallDisc(""); setOverallDiscPct(""); setPaymentMode("cash"); setCashAmount(""); setUpiAmount(""); setCashReceived("");
       setLogWalkin(false); setWalkinGuests(1); setServiceCharge(false);
       toast.success(`Bill ${data.bill_number} — ₹${data.total.toFixed(2)}${logWalkin ? " · walk-in logged" : ""}`);
       if (printAfter === "bill") {
@@ -172,18 +173,20 @@ export default function Billing() {
         {/* RIGHT: Cart */}
         <div className="w-80 xl:w-96 flex flex-col bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.06)] overflow-hidden">
           {/* Customer */}
-          <div className="p-4 bg-[#F6F3EC] border-b border-amber-900/10 space-y-2">
-            <div>
-              <label className="text-xs text-[#8A7D71] font-medium">Customer Name *</label>
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name"
-                className="w-full mt-1 rounded-lg border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
-                data-testid="billing-customer-name" />
-            </div>
-            <div>
-              <label className="text-xs text-[#8A7D71] font-medium">Phone (optional)</label>
-              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+91 ..."
-                className="w-full mt-1 rounded-lg border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
-                data-testid="billing-customer-phone" />
+          <div className="px-3 py-2.5 bg-[#F6F3EC] border-b border-amber-900/10 space-y-2">
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-w-0">
+                <label className="text-[10px] text-[#8A7D71] font-medium block mb-0.5">Customer Name *</label>
+                <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name"
+                  className="w-full rounded-lg border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                  data-testid="billing-customer-name" />
+              </div>
+              <div className="w-32 shrink-0">
+                <label className="text-[10px] text-[#8A7D71] font-medium block mb-0.5">Phone</label>
+                <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="+91 ..."
+                  className="w-full rounded-lg border border-amber-900/20 bg-white px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                  data-testid="billing-customer-phone" />
+              </div>
             </div>
             {/* Inline walk-in logging */}
             <div className="pt-1 border-t border-amber-900/15">
@@ -231,7 +234,7 @@ export default function Billing() {
 
           {/* Bill summary + payment + actions — scrollable middle, fixed footer */}
           <div className="border-t border-amber-900/10 flex flex-col min-h-0">
-            <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: "45vh" }}>
+            <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: "40vh" }}>
               {/* Overall discount */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -283,6 +286,21 @@ export default function Billing() {
                   ))}
                 </div>
               </div>
+
+              {paymentMode === "cash" && (
+                <div>
+                  <label className="text-xs text-[#8A7D71] block mb-1">Cash received (optional)</label>
+                  <input type="number" min="0" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)} placeholder="0"
+                    className="w-full rounded-lg border border-amber-900/20 px-3 py-1.5 text-sm focus:outline-none focus:border-[#8B5A2B]"
+                    data-testid="cash-received-input" />
+                  {cashReceived !== "" && (parseFloat(cashReceived) || 0) - total >= 0 && (
+                    <div className="mt-1.5 flex justify-between items-center bg-green-50 rounded-lg px-3 py-1.5 text-sm font-semibold text-green-700" data-testid="change-due">
+                      <span>Change to return</span>
+                      <span>₹{+((parseFloat(cashReceived) || 0) - total).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {paymentMode === "cash+upi" && (
                 <div className="grid grid-cols-2 gap-2">
