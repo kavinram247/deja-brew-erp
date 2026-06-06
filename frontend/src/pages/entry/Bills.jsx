@@ -5,6 +5,7 @@ import { Receipt, ChevronLeft, ChevronRight, Eye, X, Printer, ChefHat, Edit2, Pl
 import ThemeDatePicker from "../../components/ThemeDatePicker";
 import { todayYMD, shiftYMD } from "../../utils/date";
 import { usePrint } from "../../components/usePrint";
+import { useAuth } from "../../contexts/AuthContext";
 
 const TAX = 0.025;
 const SERVICE_RATE = 0.05;
@@ -24,6 +25,8 @@ export default function EntryBills() {
   const [showBill, setShowBill] = useState(null);
   const [editBill, setEditBill] = useState(null);
   const { printBill, printKot, PrintHost } = usePrint();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
 
   const load = async (d = date) => {
     setLoading(true);
@@ -35,6 +38,15 @@ export default function EntryBills() {
 
   const changeDate = (delta) => {
     setDate(shiftYMD(date, delta));
+  };
+
+  const handleDelete = async (b) => {
+    if (!window.confirm(`Delete bill ${b.bill_number}? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/bills/${b.id}`);
+      setBills((p) => p.filter((x) => x.id !== b.id));
+      toast.success(`${b.bill_number} deleted · inventory restored`);
+    } catch (err) { toast.error(err.response?.data?.detail || "Failed to delete"); }
   };
 
   const totalRev = bills.reduce((s, b) => s + (b.total || 0), 0);
@@ -124,6 +136,12 @@ export default function EntryBills() {
                             className="text-[#8A7D71] hover:text-[#3E5C46]" data-testid={`print-kot-${b.id}`}>
                             <ChefHat size={14} />
                           </button>
+                          {isOwner && (
+                            <button onClick={() => handleDelete(b)} title="Delete bill"
+                              className="text-[#8A7D71] hover:text-[#B84B4B]" data-testid={`delete-eb-${b.id}`}>
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

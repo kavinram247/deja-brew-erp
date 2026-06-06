@@ -224,3 +224,19 @@ async def update_bill(bill_id: str, input: BillCreate, request: Request):
     await db.bills.update_one({"_id": ObjectId(bill_id)}, {"$set": update})
     updated = await db.bills.find_one({"_id": ObjectId(bill_id)})
     return serialize(updated)
+
+
+@router.delete("/{bill_id}")
+async def delete_bill(bill_id: str, request: Request):
+    """Permanently delete a bill (owner only). Restores the inventory it deducted."""
+    db = get_db()
+    user = await get_current_user(request, db)
+    if user.get("role") != "owner":
+        raise HTTPException(403, "Owner access required")
+    existing = await db.bills.find_one({"_id": ObjectId(bill_id)})
+    if not existing:
+        raise HTTPException(404, "Bill not found")
+    # Full undo: put the deducted stock back, then remove the bill entirely
+    await restore_inventory(db, existing.get("inventory_deductions", []))
+    await db.bills.delete_one({"_id": ObjectId(bill_id)})
+    return {"message": "Bill deleted"}

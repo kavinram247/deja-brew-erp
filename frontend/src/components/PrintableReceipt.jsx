@@ -23,7 +23,7 @@ function fmtDT(iso) {
 
 const BILL_CSS = `
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.4;color:#000;background:#fff;width:72mm;padding:4mm 3mm}
+body{font-family:'Courier New',Courier,monospace;font-size:12px;font-weight:700;line-height:1.4;color:#000;background:#fff;width:72mm;padding:4mm 3mm}
 @page{size:76mm auto;margin:0}
 .tc{text-align:center}
 .bold{font-weight:700}
@@ -38,7 +38,7 @@ hr.s{border-top-style:solid}
 table{width:100%;border-collapse:collapse}
 thead tr{border-bottom:1px solid #000}
 th{font-size:9px;text-transform:uppercase;padding:2px 0;font-weight:700}
-td{font-size:10.5px;padding:2px 0;vertical-align:top}
+td{font-size:11px;font-weight:700;padding:2px 0;vertical-align:top}
 .r{text-align:right}
 .cn{width:46%}
 .cq{width:10%}
