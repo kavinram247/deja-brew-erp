@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, AlertTriangle, Package } from "lucide-react";
+import { Plus, Edit2, Trash2, AlertTriangle, Package, Search, X } from "lucide-react";
 
 const SECTIONS = ["Barista", "Kitchen", "Other"];
 const UNITS = ["kg", "g", "liters", "ml", "pieces", "packets", "bottles", "boxes"];
@@ -19,6 +19,7 @@ export default function Inventory() {
   const [adjustMode, setAdjustMode] = useState("add"); // add / set
   const [adjustVal, setAdjustVal] = useState("");
   const [section, setSection] = useState("All");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -29,7 +30,12 @@ export default function Inventory() {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = section === "All" ? items : items.filter((i) => i.section === section);
+  const q = search.trim().toLowerCase();
+  const filtered = items.filter((i) => {
+    if (section !== "All" && i.section !== section) return false;
+    if (q && !(i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q))) return false;
+    return true;
+  });
   const lowCount = items.filter((i) => i.current_stock <= i.min_quantity).length;
 
   const openAdd = () => { setForm(EMPTY); setEditItem(null); setShowForm(true); };
@@ -80,7 +86,20 @@ export default function Inventory() {
           <h1 className="text-3xl font-bold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Inventory</h1>
           <p className="text-[#8A7D71] text-sm mt-1">{items.length} items · {lowCount > 0 ? <span className="text-red-500">{lowCount} low stock</span> : "All OK"}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A7D71]" />
+            <input
+              type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search items..."
+              className="pl-9 pr-8 py-1.5 rounded-full bg-white border border-amber-900/20 text-xs focus:outline-none focus:border-[#8B5A2B] focus:ring-2 focus:ring-[#8B5A2B]/15 w-44"
+              data-testid="inv-search-input" />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A7D71] hover:text-[#5C4F43]">
+                <X size={14} />
+              </button>
+            )}
+          </div>
           {["All", ...SECTIONS].map((s) => (
             <button key={s} onClick={() => setSection(s)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${section === s ? "bg-[#8B5A2B] text-white" : "bg-white border border-amber-900/20 text-[#5C4F43] hover:bg-[#8B5A2B]/10"}`}
@@ -99,7 +118,7 @@ export default function Inventory() {
           : filtered.length === 0 ? (
             <div className="text-center py-12">
               <Package size={40} className="text-[#C9B99A] mx-auto mb-2" />
-              <p className="text-[#8A7D71] text-sm">No items yet</p>
+              <p className="text-[#8A7D71] text-sm">{q || section !== "All" ? "No items match" : "No items yet"}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
