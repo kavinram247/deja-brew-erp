@@ -121,25 +121,25 @@ export default function EntryBills() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <button onClick={() => setShowBill(b)} title="View"
-                            className="text-[#8A7D71] hover:text-[#5C4F43]" data-testid={`view-eb-${b.id}`}>
-                            <Eye size={14} />
+                            className="p-2.5 rounded-xl bg-[#F6F3EC] text-[#8A7D71] hover:bg-[#5C4F43]/10 hover:text-[#5C4F43] active:scale-95 transition" data-testid={`view-eb-${b.id}`}>
+                            <Eye size={22} />
                           </button>
                           <button onClick={() => setEditBill(b)} title="Edit"
-                            className="text-[#8A7D71] hover:text-[#8B5A2B]" data-testid={`edit-eb-${b.id}`}>
-                            <Edit2 size={14} />
+                            className="p-2.5 rounded-xl bg-[#F6F3EC] text-[#8A7D71] hover:bg-[#8B5A2B]/10 hover:text-[#8B5A2B] active:scale-95 transition" data-testid={`edit-eb-${b.id}`}>
+                            <Edit2 size={22} />
                           </button>
                           <button onClick={() => printBill(b)} title="Print Bill"
-                            className="text-[#8A7D71] hover:text-[#8B5A2B]" data-testid={`print-bill-${b.id}`}>
-                            <Printer size={14} />
+                            className="p-2.5 rounded-xl bg-[#F6F3EC] text-[#8A7D71] hover:bg-[#8B5A2B]/10 hover:text-[#8B5A2B] active:scale-95 transition" data-testid={`print-bill-${b.id}`}>
+                            <Printer size={22} />
                           </button>
                           <button onClick={() => printKot(b)} title="Print KOT"
-                            className="text-[#8A7D71] hover:text-[#3E5C46]" data-testid={`print-kot-${b.id}`}>
-                            <ChefHat size={14} />
+                            className="p-2.5 rounded-xl bg-[#F6F3EC] text-[#8A7D71] hover:bg-[#3E5C46]/10 hover:text-[#3E5C46] active:scale-95 transition" data-testid={`print-kot-${b.id}`}>
+                            <ChefHat size={22} />
                           </button>
                           {isOwner && (
                             <button onClick={() => handleDelete(b)} title="Delete bill"
-                              className="text-[#8A7D71] hover:text-[#B84B4B]" data-testid={`delete-eb-${b.id}`}>
-                              <Trash2 size={14} />
+                              className="p-2.5 rounded-xl bg-[#F6F3EC] text-[#8A7D71] hover:bg-[#B84B4B]/10 hover:text-[#B84B4B] active:scale-95 transition" data-testid={`delete-eb-${b.id}`}>
+                              <Trash2 size={22} />
                             </button>
                           )}
                         </div>
