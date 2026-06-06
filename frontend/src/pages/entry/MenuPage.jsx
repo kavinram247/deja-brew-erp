@@ -3,9 +3,25 @@ import api from "../../utils/api";
 import { toast } from "sonner";
 import { Plus, Trash2, Edit2, UtensilsCrossed, ChefHat, X, Search } from "lucide-react";
 
-const CATS = ["Coffee", "Tea", "Beverages", "Breakfast", "Snacks", "Mains", "Desserts", "Other"];
+const CATS = [
+  "Soup",
+  "Salad",
+  "Small Plates",
+  "Burger and Sandwiches",
+  "Gourmet Wraps",
+  "All Day Breakfast",
+  "Mains",
+  "Hot Beverages",
+  "Cold Beverages",
+  "Signatures",
+  "House Speciality Coffees",
+  "Tea Treasures",
+  "Mojitos",
+  "Milkshakes",
+  "Frappes",
+];
 
-const EMPTY_ITEM = { name: "", category: "Coffee", price: 0, description: "", active: true };
+const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true };
 
 export default function MenuPage() {
   const [items, setItems] = useState([]);
