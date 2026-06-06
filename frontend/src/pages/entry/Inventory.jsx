@@ -5,8 +5,8 @@ import { Plus, Edit2, Trash2, AlertTriangle, Package } from "lucide-react";
 
 const SECTIONS = ["Barista", "Kitchen", "Other"];
 const UNITS = ["kg", "g", "liters", "ml", "pieces", "packets", "bottles", "boxes"];
-const CATS = ["Beverages", "Dairy", "Dry Goods", "Produce", "Packaging", "Cleaning", "Other"];
-const EMPTY = { name: "", category: "Dry Goods", section: "Barista", current_stock: 0, unit: "kg", min_quantity: 0 };
+const CATS = ["Frozen Items", "Dry Store Items", "Dairy", "Others"];
+const EMPTY = { name: "", category: "Frozen Items", section: "Barista", current_stock: 0, unit: "kg", min_quantity: 0 };
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
