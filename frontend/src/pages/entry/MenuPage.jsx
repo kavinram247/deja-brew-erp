@@ -94,10 +94,15 @@ export default function MenuPage() {
     } catch { toast.error("Failed"); }
   };
 
-  const openRecipe = (item) => {
+  const openRecipe = async (item) => {
     const existing = recipes[item.id];
     setRecipeIngredients(existing ? [...existing.ingredients] : []);
     setRecipeTarget(item);
+    // Refresh inventory so items added since the page loaded show up in the dropdown
+    try {
+      const { data } = await api.get("/inventory");
+      setInventory(data);
+    } catch { /* keep existing inventory list on failure */ }
   };
 
   const addIng = () => {
