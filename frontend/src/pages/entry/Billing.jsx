@@ -36,9 +36,8 @@ export default function Billing() {
   }, []);
 
   const q = debouncedSearch.trim().toLowerCase();
-  const addons = menuItems.filter((i) => i.active && i.category === "Add-ons");
   const filtered = menuItems
-    .filter((i) => i.active && i.category !== "Add-ons")
+    .filter((i) => i.active)
     .filter((i) => !q || i.name.toLowerCase().includes(q) || (i.category || "").toLowerCase().includes(q));
 
   const cartMap = useMemo(() => Object.fromEntries(cart.map((c) => [c.id, c.qty])), [cart]);
@@ -214,20 +213,6 @@ export default function Billing() {
             <span className="flex items-center gap-2 text-sm font-semibold text-[#2C241B]"><ShoppingCart size={14} /> Cart ({cart.reduce((s, c) => s + c.qty, 0)})</span>
             {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-[#B84B4B] hover:underline" data-testid="clear-cart-btn">Clear</button>}
           </div>
-
-          {/* Add-ons quick strip */}
-          {addons.length > 0 && (
-            <div className="px-3 py-2 border-b border-amber-900/10 bg-[#FBF8F2]">
-              <p className="text-[10px] text-[#8A7D71] font-medium uppercase tracking-wider mb-1.5">Add-ons</p>
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-                {addons.map((item) => (
-                  <div key={item.id} className="shrink-0 w-[72px]">
-                    <MenuItemButton item={item} qty={cartMap[item.id] || 0} onAdd={toggleItem} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Items */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">

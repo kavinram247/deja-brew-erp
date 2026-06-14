@@ -129,43 +129,6 @@ async def startup_event():
             {"$set": {"password_hash": hash_password(admin_password)}},
         )
 
-    # Seed add-on menu items, inventory stock, and recipes (idempotent)
-    ADDON_DEFS = [
-        {"name": "Caramel", "price": 40.0, "inv_name": "Caramel Syrup", "unit": "ml", "qty": 20, "inv_cat": "Dry Store Items", "min_qty": 200},
-        {"name": "Irish", "price": 40.0, "inv_name": "Irish Cream Syrup", "unit": "ml", "qty": 20, "inv_cat": "Dry Store Items", "min_qty": 200},
-        {"name": "Hazelnut", "price": 40.0, "inv_name": "Hazelnut Syrup", "unit": "ml", "qty": 20, "inv_cat": "Dry Store Items", "min_qty": 200},
-        {"name": "Vanilla", "price": 40.0, "inv_name": "Vanilla Syrup", "unit": "ml", "qty": 20, "inv_cat": "Dry Store Items", "min_qty": 200},
-        {"name": "Ice Cream", "price": 50.0, "inv_name": "Ice Cream", "unit": "pieces", "qty": 1, "inv_cat": "Frozen Items", "min_qty": 10},
-    ]
-    for a in ADDON_DEFS:
-        menu_doc = await db.menu_items.find_one({"name": a["name"], "category": "Add-ons"})
-        if not menu_doc:
-            r = await db.menu_items.insert_one({
-                "name": a["name"], "category": "Add-ons", "price": a["price"],
-                "description": "", "active": True,
-            })
-            menu_id = str(r.inserted_id)
-        else:
-            menu_id = str(menu_doc["_id"])
-
-        inv_doc = await db.inventory.find_one({"name": a["inv_name"]})
-        if not inv_doc:
-            r = await db.inventory.insert_one({
-                "name": a["inv_name"], "category": a["inv_cat"], "section": "Barista",
-                "current_stock": 0, "unit": a["unit"], "min_quantity": a["min_qty"],
-                "cost_per_unit": 0.0,
-            })
-            inv_id, inv_name = str(r.inserted_id), a["inv_name"]
-        else:
-            inv_id, inv_name = str(inv_doc["_id"]), inv_doc["name"]
-
-        if not await db.recipes.find_one({"menu_item_id": menu_id}):
-            await db.recipes.insert_one({
-                "menu_item_id": menu_id, "menu_item_name": a["name"],
-                "ingredients": [{"inventory_item_id": inv_id, "item_name": inv_name,
-                                 "quantity": a["qty"], "unit": a["unit"]}],
-            })
-
     os.makedirs("/tmp/memory", exist_ok=True)
     with open("/tmp/memory/test_credentials.md", "w") as f:
         f.write(f"""# Deja Brew ERP v2 - Test Credentials
