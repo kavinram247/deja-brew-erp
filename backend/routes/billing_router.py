@@ -18,6 +18,7 @@ class BillItemCreate(BaseModel):
     price: float
     quantity: int
     item_discount_pct: float = 0.0
+    tax_exempt: bool = False
 
 
 class BillCreate(BaseModel):
@@ -33,11 +34,13 @@ class BillCreate(BaseModel):
 
 def compute_totals(calc_items, overall_discount, service_enabled):
     subtotal = round(sum(i["subtotal"] for i in calc_items), 2)
-    taxable = round(max(0.0, subtotal - overall_discount), 2)
+    taxable_subtotal = round(sum(i["subtotal"] for i in calc_items if not i.get("tax_exempt")), 2)
+    exempt_subtotal = round(subtotal - taxable_subtotal, 2)
+    taxable = round(max(0.0, taxable_subtotal - overall_discount), 2)
     cgst = round(taxable * TAX_RATE, 2)
     sgst = round(taxable * TAX_RATE, 2)
     service = round(taxable * SERVICE_RATE, 2) if service_enabled else 0.0
-    raw_total = taxable + cgst + sgst + service
+    raw_total = taxable + cgst + sgst + service + exempt_subtotal
     rounded_total = round(raw_total)
     round_off = round(rounded_total - raw_total, 2)
     return {
@@ -55,6 +58,7 @@ def calc_item(item: BillItemCreate) -> dict:
         "menu_item_id": item.menu_item_id, "name": item.name,
         "price": item.price, "quantity": item.quantity,
         "item_discount_pct": item.item_discount_pct,
+        "tax_exempt": item.tax_exempt,
         "gross": gross, "item_discount": disc,
         "subtotal": round(gross - disc, 2),
     }

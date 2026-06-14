@@ -217,6 +217,7 @@ function EditModal({ bill, onClose, onSaved }) {
   const [items, setItems] = useState((bill.items || []).map((i) => ({
     menu_item_id: i.menu_item_id, name: i.name, price: i.price,
     quantity: i.quantity, item_discount_pct: i.item_discount_pct || 0,
+    tax_exempt: i.tax_exempt || false,
   })));
   const [overallDisc, setOverallDisc] = useState(bill.overall_discount || 0);
   const [paymentMode, setPaymentMode] = useState(bill.payment_mode || "cash");
@@ -231,12 +232,14 @@ function EditModal({ bill, onClose, onSaved }) {
     return { ...it, gross, itemDisc: disc, subtotal: gross - disc };
   });
   const subtotal = lines.reduce((s, l) => s + l.subtotal, 0);
+  const taxableSubtotal = lines.filter((l) => !l.tax_exempt).reduce((s, l) => s + l.subtotal, 0);
+  const exemptSubtotal = subtotal - taxableSubtotal;
   const disc = parseFloat(overallDisc) || 0;
-  const taxable = Math.max(0, subtotal - disc);
+  const taxable = Math.max(0, taxableSubtotal - disc);
   const cgst = taxable * TAX;
   const sgst = taxable * TAX;
   const service = serviceCharge ? taxable * SERVICE_RATE : 0;
-  const rawTotal = taxable + cgst + sgst + service;
+  const rawTotal = taxable + cgst + sgst + service + exemptSubtotal;
   const total = Math.round(rawTotal);
   const roundOff = total - rawTotal;
 

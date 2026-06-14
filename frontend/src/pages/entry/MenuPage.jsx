@@ -22,7 +22,7 @@ const CATS = [
   "Desserts",
 ];
 
-const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true };
+const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true, tax_exempt: false };
 
 export default function MenuPage() {
   const [items, setItems] = useState([]);
@@ -62,6 +62,7 @@ export default function MenuPage() {
     setItemForm({
       name: item.name, category: item.category, price: item.price,
       description: item.description || "", active: item.active,
+      tax_exempt: item.tax_exempt || false,
     });
     setEditItem(item); setShowItemForm(true);
   };
@@ -208,9 +209,14 @@ export default function MenuPage() {
                       <p className="font-semibold text-[#2C241B] truncate">{item.name}</p>
                       <p className="text-[10px] text-[#8A7D71] uppercase tracking-wider mt-0.5">{item.category}</p>
                     </div>
-                    <span className="text-lg font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>
-                      ₹{item.price}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>
+                        ₹{item.price}
+                      </span>
+                      {item.tax_exempt && (
+                        <p className="text-[9px] text-[#3E5C46] font-semibold uppercase tracking-wider mt-0.5">No GST</p>
+                      )}
+                    </div>
                   </div>
                   {item.description && <p className="text-xs text-[#8A7D71] mb-2">{item.description}</p>}
 
@@ -283,6 +289,11 @@ export default function MenuPage() {
                 <input type="checkbox" checked={itemForm.active} onChange={(e) => setItemForm({ ...itemForm, active: e.target.checked })}
                   className="rounded" data-testid="menu-active-toggle" />
                 Active (visible in billing)
+              </label>
+              <label className="flex items-center gap-2 text-sm text-[#5C4F43]">
+                <input type="checkbox" checked={itemForm.tax_exempt} onChange={(e) => setItemForm({ ...itemForm, tax_exempt: e.target.checked })}
+                  className="rounded" data-testid="menu-tax-exempt-toggle" />
+                Tax exempt (no GST — billed at flat price)
               </label>
               <div className="flex gap-2 pt-2">
                 <button type="button" onClick={() => setShowItemForm(false)}

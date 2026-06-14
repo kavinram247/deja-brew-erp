@@ -14,6 +14,7 @@ class MenuItemCreate(BaseModel):
     price: float
     description: Optional[str] = None
     active: bool = True
+    tax_exempt: bool = False
 
 
 def serialize(doc):

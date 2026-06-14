@@ -45,7 +45,7 @@ export default function Billing() {
   const toggleItem = (item) => {
     setCart((p) => {
       const ex = p.find((c) => c.id === item.id);
-      if (!ex) return [...p, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+      if (!ex) return [...p, { id: item.id, name: item.name, price: item.price, qty: 1, tax_exempt: item.tax_exempt || false }];
       if (ex.qty <= 1) return p.filter((c) => c.id !== item.id);
       return p.map((c) => c.id === item.id ? { ...c, qty: c.qty - 1 } : c);
     });
@@ -61,12 +61,14 @@ export default function Billing() {
 
   const cartLines = cart.map((c) => ({ ...c, subtotal: c.price * c.qty }));
   const subtotal = cartLines.reduce((s, c) => s + c.subtotal, 0);
-  const disc = Math.min(subtotal, (parseFloat(overallDisc) || 0) + subtotal * ((parseFloat(overallDiscPct) || 0) / 100));
-  const taxable = Math.max(0, subtotal - disc);
+  const taxableSubtotal = cartLines.filter((c) => !c.tax_exempt).reduce((s, c) => s + c.subtotal, 0);
+  const exemptSubtotal = subtotal - taxableSubtotal;
+  const disc = Math.min(taxableSubtotal, (parseFloat(overallDisc) || 0) + taxableSubtotal * ((parseFloat(overallDiscPct) || 0) / 100));
+  const taxable = Math.max(0, taxableSubtotal - disc);
   const cgst = taxable * TAX;
   const sgst = taxable * TAX;
   const service = serviceCharge ? taxable * SERVICE_RATE : 0;
-  const rawTotal = taxable + cgst + sgst + service;
+  const rawTotal = taxable + cgst + sgst + service + exemptSubtotal;
   const total = Math.round(rawTotal);
   const roundOff = total - rawTotal;
 
@@ -86,7 +88,7 @@ export default function Billing() {
       const { data } = await api.post("/bills", {
         customer_name: customerName,
         customer_phone: customerPhone || null,
-        items: cartLines.map((c) => ({ menu_item_id: c.id, name: c.name, price: c.price, quantity: c.qty })),
+        items: cartLines.map((c) => ({ menu_item_id: c.id, name: c.name, price: c.price, quantity: c.qty, tax_exempt: c.tax_exempt || false })),
         overall_discount: disc,
         payment_mode: paymentMode,
         cash_amount: cash, upi_amount: upi,
