@@ -20,6 +20,7 @@ const CATS = [
   "Milkshakes",
   "Frappes",
   "Desserts",
+  "Add-ons",
 ];
 
 const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true };
