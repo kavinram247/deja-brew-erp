@@ -6,7 +6,16 @@ import ThemeDatePicker from "../components/ThemeDatePicker";
 import { downloadCsv } from "../utils/csv";
 import { printDailySummary } from "../utils/dailySummaryPrint";
 
-const todayStr = () => new Date().toISOString().split("T")[0];
+// Format using LOCAL date components — toISOString() converts to UTC, which
+// shifts the date by a day in timezones ahead of UTC (e.g. IST) and breaks
+// day-by-day arithmetic around local midnight.
+function toLocalYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+const todayStr = () => toLocalYMD(new Date());
 const money = (n) => `₹${(Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n) => (Number(n) || 0).toLocaleString("en-IN");
 
@@ -35,7 +44,7 @@ export default function DailySummary() {
   const shiftDay = (delta) => {
     const d = new Date(date + "T00:00:00");
     d.setDate(d.getDate() + delta);
-    const next = d.toISOString().split("T")[0];
+    const next = toLocalYMD(d);
     if (next > todayStr()) return;
     setDate(next);
   };
