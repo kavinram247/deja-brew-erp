@@ -376,3 +376,138 @@ async def get_discount_stats(
     for k in ["total_overall_discount", "total_service_charge", "gross_subtotal"]:
         r[k] = round(r.get(k, 0), 2)
     return r
+
+
+# Human-friendly labels for the payment-mode breakdown
+_PAY_MODE_LABELS = {"cash": "Cash", "upi": "UPI", "cash+upi": "Split (Cash+UPI)", "card": "Card"}
+
+
+def _compute_daily_summary(day: str, bills: list, menu_items: list, generated_at: str) -> dict:
+    """Pure aggregation for the daily summary — no DB access, so it is unit-testable.
+
+    bills: raw bill docs for the day (already filtered to non-voided).
+    menu_items: raw menu docs (need _id, name, category) for the category join.
+    """
+    # Bill items don't store a category — join menu_item_id (fallback: name) -> category.
+    cat_by_id = {str(m["_id"]): (m.get("category") or "Uncategorized") for m in menu_items}
+    cat_by_name = {}
+    for m in menu_items:
+        nm = (m.get("name") or "").strip().lower()
+        if nm:
+            cat_by_name.setdefault(nm, m.get("category") or "Uncategorized")
+
+    categories: dict = {}
+    breakup = {
+        "cash": 0.0, "upi": 0.0, "gross": 0.0, "item_discount": 0.0,
+        "overall_discount": 0.0, "cgst": 0.0, "sgst": 0.0,
+        "service_charge": 0.0, "round_off": 0.0, "net_with_tax": 0.0,
+    }
+    pay_modes: dict = {}
+    total_qty = 0
+
+    for b in bills:
+        for it in b.get("items", []):
+            name = (it.get("name") or "").strip() or "Unnamed"
+            category = (
+                cat_by_id.get(it.get("menu_item_id"))
+                or cat_by_name.get(name.lower())
+                or "Uncategorized"
+            )
+            qty = it.get("quantity", 0) or 0
+            amount = round(it.get("subtotal", 0) or 0, 2)
+            gross = it.get("gross")
+            if gross is None:
+                gross = (it.get("price", 0) or 0) * qty
+            gross = round(gross, 2)
+
+            cat = categories.setdefault(category, {"category": category, "items": {}, "total": 0.0, "qty": 0})
+            row = cat["items"].setdefault(name, {"name": name, "count": 0, "amount": 0.0})
+            row["count"] += qty
+            row["amount"] = round(row["amount"] + amount, 2)
+            cat["total"] = round(cat["total"] + amount, 2)
+            cat["qty"] += qty
+
+            breakup["gross"] = round(breakup["gross"] + gross, 2)
+            breakup["item_discount"] = round(breakup["item_discount"] + (it.get("item_discount", 0) or 0), 2)
+            total_qty += qty
+
+        breakup["cash"] = round(breakup["cash"] + (b.get("cash_amount", 0) or 0), 2)
+        breakup["upi"] = round(breakup["upi"] + (b.get("upi_amount", 0) or 0), 2)
+        breakup["overall_discount"] = round(breakup["overall_discount"] + (b.get("overall_discount", 0) or 0), 2)
+        breakup["cgst"] = round(breakup["cgst"] + (b.get("cgst", 0) or 0), 2)
+        breakup["sgst"] = round(breakup["sgst"] + (b.get("sgst", 0) or 0), 2)
+        breakup["service_charge"] = round(breakup["service_charge"] + (b.get("service_charge", 0) or 0), 2)
+        breakup["round_off"] = round(breakup["round_off"] + (b.get("round_off", 0) or 0), 2)
+        breakup["net_with_tax"] = round(breakup["net_with_tax"] + (b.get("total", 0) or 0), 2)
+
+        mode = (b.get("payment_mode") or "unknown").lower()
+        pm = pay_modes.setdefault(mode, {"mode": mode, "bills": 0, "amount": 0.0})
+        pm["bills"] += 1
+        pm["amount"] = round(pm["amount"] + (b.get("total", 0) or 0), 2)
+
+    item_sales = round(sum(c["total"] for c in categories.values()), 2)
+
+    cat_list = []
+    for c in categories.values():
+        items = sorted(c["items"].values(), key=lambda x: x["amount"], reverse=True)
+        cat_list.append({
+            "category": c["category"],
+            "items": items,
+            "total": c["total"],
+            "qty": c["qty"],
+            "percent": round(c["total"] / item_sales * 100, 2) if item_sales else 0.0,
+        })
+    cat_list.sort(key=lambda x: x["total"], reverse=True)
+
+    pm_list = sorted(pay_modes.values(), key=lambda x: x["amount"], reverse=True)
+    for pm in pm_list:
+        pm["label"] = _PAY_MODE_LABELS.get(pm["mode"], pm["mode"].title())
+
+    total_discount = round(breakup["item_discount"] + breakup["overall_discount"], 2)
+    tax = round(breakup["cgst"] + breakup["sgst"] + breakup["service_charge"], 2)
+    net_without_tax = round(breakup["gross"] - total_discount, 2)
+    collected = round(breakup["cash"] + breakup["upi"], 2)
+
+    return {
+        "date": day,
+        "generated_at": generated_at,
+        "bills": len(bills),
+        "categories": cat_list,
+        "breakup": {
+            "cash": breakup["cash"],
+            "upi": breakup["upi"],
+            "card": 0.0,
+            "collected": collected,
+            "gross": breakup["gross"],
+            "item_discount": breakup["item_discount"],
+            "overall_discount": breakup["overall_discount"],
+            "total_discount": total_discount,
+            "complementary": 0.0,
+            "net_without_tax": net_without_tax,
+            "cgst": breakup["cgst"],
+            "sgst": breakup["sgst"],
+            "service_charge": breakup["service_charge"],
+            "tax": tax,
+            "round_off": breakup["round_off"],
+            "net_with_tax": breakup["net_with_tax"],
+        },
+        "payment_modes": pm_list,
+        "totals": {"bills": len(bills), "qty": total_qty, "item_sales": item_sales},
+    }
+
+
+@router.get("/daily-summary")
+async def get_daily_summary(request: Request, date_str: Optional[str] = None):
+    """Category-wise daily sales summary for a single day (POS bills only).
+
+    Mirrors the café's end-of-day "Category Wise Report": each menu category with
+    its items (qty + amount) and share of sales, plus a sales/tax/payment breakup.
+    """
+    db = get_db()
+    await get_current_user(request, db)
+    day = date_str or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    bills = await db.bills.find({"date": day, "is_voided": {"$ne": True}}).to_list(None)
+    menu_items = await db.menu_items.find({}, {"category": 1, "name": 1}).to_list(None)
+
+    return _compute_daily_summary(day, bills, menu_items, datetime.now(timezone.utc).isoformat())
