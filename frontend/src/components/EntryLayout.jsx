@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Users2, ShoppingBag, Wallet, Package, Receipt, ClipboardList, UtensilsCrossed, LogOut, Menu, LayoutDashboard, Landmark, Banknote, FileText, UserCheck, BarChart3 } from "lucide-react";
+import { Users2, ShoppingBag, Wallet, Package, Receipt, ClipboardList, UtensilsCrossed, LogOut, Menu, LayoutDashboard, Landmark, Banknote, FileText, UserCheck, BarChart3, CalendarClock } from "lucide-react";
 import { useState } from "react";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { to: "/entry/inventory-movement", label: "Inventory Movement", icon: BarChart3 },
   { to: "/entry/billing",   label: "Billing",       icon: Receipt },
   { to: "/entry/bills",     label: "Bills",         icon: FileText },
+  { to: "/entry/daily-summary", label: "Daily Summary", icon: CalendarClock },
   { to: "/entry/routines",  label: "Routines",      icon: ClipboardList },
   { to: "/entry/menu",      label: "Menu",          icon: UtensilsCrossed },
   { to: "/entry/banking",   label: "Banking",       icon: Landmark },
