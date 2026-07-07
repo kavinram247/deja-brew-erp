@@ -1,0 +1,14 @@
+{
+  "id": "session-1783416889236",
+  "startedAt": "2026-07-07T09:34:49.236Z",
+  "cwd": "/Users/kavin/Downloads/deja-brew-erp",
+  "context": {},
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-07-07T09:34:49.666Z",
+  "duration": 431
+}
