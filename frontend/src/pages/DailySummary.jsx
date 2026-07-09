@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import api from "../utils/api";
 import { toast } from "sonner";
-import { Printer, Download, ChevronLeft, ChevronRight, Receipt, Package, IndianRupee, Wallet } from "lucide-react";
+import { Printer, Download, ChevronLeft, ChevronRight, Receipt, Package, IndianRupee, Wallet, Share2 } from "lucide-react";
 import ThemeDatePicker from "../components/ThemeDatePicker";
 import { downloadCsv } from "../utils/csv";
 import { printDailySummary } from "../utils/dailySummaryPrint";
+import { buildDailySummaryFile } from "../utils/dailySummaryPdf";
 
 // Format using LOCAL date components — toISOString() converts to UTC, which
 // shifts the date by a day in timezones ahead of UTC (e.g. IST) and breaks
@@ -18,6 +19,20 @@ function toLocalYMD(d) {
 const todayStr = () => toLocalYMD(new Date());
 const money = (n) => `₹${(Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n) => (Number(n) || 0).toLocaleString("en-IN");
+
+// Where the "Share to WhatsApp" button targets (country code + number, no +).
+const SHARE_NUMBER = "919444391394"; // +91 9444391394
+
+const shareCaption = (d) => {
+  const b = d.breakup || {};
+  return [
+    "Deja Brew — Daily Summary",
+    `Date: ${d.date}`,
+    `Bills: ${num(d.bills)} · Items: ${num(d.totals?.qty)}`,
+    `Net Sales (with tax): ${money(b.net_with_tax)}`,
+    `Cash: ${money(b.cash)} · UPI: ${money(b.upi)}`,
+  ].join("\n");
+};
 
 const CAT_COLORS = ["#8B5A2B", "#3E5C46", "#D48B3D", "#C06C4C", "#6B4E7A", "#4C7A9E", "#A6803A", "#7A5C46"];
 
@@ -76,6 +91,45 @@ export default function DailySummary() {
     printDailySummary(data);
   };
 
+  const [sharing, setSharing] = useState(false);
+  const shareWhatsApp = async () => {
+    if (!hasData) { toast.error("Nothing to share"); return; }
+    setSharing(true);
+    let file;
+    try {
+      file = await buildDailySummaryFile(data);
+    } catch {
+      toast.error("Couldn't build the PDF");
+      setSharing(false);
+      return;
+    }
+
+    // Preferred (mobile): native share sheet with the real PDF attached — pick WhatsApp → the contact → send.
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: `Daily Summary ${data.date}`, text: shareCaption(data) });
+      } catch (e) {
+        if (!e || e.name !== "AbortError") toast.error("Sharing was cancelled");
+      } finally {
+        setSharing(false);
+      }
+      return;
+    }
+
+    // Fallback (desktop / unsupported): download the PDF, then open a WhatsApp chat to the number with a text summary.
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    window.open(`https://wa.me/${SHARE_NUMBER}?text=${encodeURIComponent(shareCaption(data))}`, "_blank");
+    toast.info("PDF downloaded — attach it in the WhatsApp chat that opened");
+    setSharing(false);
+  };
+
   const KPIS = [
     { label: "Bills", value: num(data?.bills), icon: Receipt, color: "#8B5A2B" },
     { label: "Items Sold", value: num(data?.totals?.qty), icon: Package, color: "#3E5C46" },
@@ -122,6 +176,11 @@ export default function DailySummary() {
               Today
             </button>
           )}
+          <button onClick={shareWhatsApp} disabled={sharing}
+            className="flex items-center gap-2 bg-[#25D366] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#1EBE5B] disabled:opacity-50"
+            title="Share summary PDF via WhatsApp (9444391394)" data-testid="ds-whatsapp">
+            <Share2 size={14} /> {sharing ? "Preparing..." : "WhatsApp"}
+          </button>
           <button onClick={doPrint}
             className="flex items-center gap-2 bg-[#8B5A2B] text-white px-3 py-2 rounded-xl text-sm font-semibold hover:bg-[#704822]" data-testid="ds-print">
             <Printer size={14} /> Print / PDF
