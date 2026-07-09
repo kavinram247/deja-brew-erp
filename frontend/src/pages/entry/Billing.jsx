@@ -175,7 +175,7 @@ export default function Billing() {
         {/* RIGHT: Cart */}
         <div className="w-80 xl:w-96 flex flex-col bg-white rounded-2xl border border-amber-900/10 shadow-[0_4px_24px_rgba(44,36,27,0.06)] overflow-hidden">
           {/* Customer */}
-          <div className="px-3 py-2.5 bg-[#F6F3EC] border-b border-amber-900/10 space-y-2">
+          <div className="px-3 py-2.5 bg-[#F6F3EC] border-b border-amber-900/10 space-y-2 shrink-0">
             <div className="flex items-end gap-2">
               <div className="flex-1 min-w-0">
                 <label className="text-[10px] text-[#8A7D71] font-medium block mb-0.5">Customer Name *</label>
@@ -211,32 +211,33 @@ export default function Billing() {
           </div>
 
           {/* Cart header */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-amber-900/10">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-amber-900/10 shrink-0">
             <span className="flex items-center gap-2 text-sm font-semibold text-[#2C241B]"><ShoppingCart size={14} /> Cart ({cart.reduce((s, c) => s + c.qty, 0)})</span>
             {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-[#B84B4B] hover:underline" data-testid="clear-cart-btn">Clear</button>}
           </div>
 
-          {/* Items */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {cart.length === 0 ? <div className="text-center text-[#8A7D71] text-sm py-6">Tap items to add</div>
-              : cartLines.map((item) => (
-                <div key={item.id} className="bg-[#F6F3EC] rounded-xl p-2.5">
-                  <div className="flex items-center gap-2">
-                    <p className="flex-1 text-sm font-medium text-[#2C241B] truncate">{item.name}</p>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => adjustQty(item.id, -1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-red-50 text-[#2C241B]" data-testid={`dec-${item.id}`}><Minus size={10} /></button>
-                      <span className="w-5 text-center text-sm font-bold text-[#2C241B]">{item.qty}</span>
-                      <button onClick={() => adjustQty(item.id, 1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-green-50 text-[#2C241B]" data-testid={`inc-${item.id}`}><Plus size={10} /></button>
+          {/* Scrollable body: cart items + summary + payment in ONE scroll region */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* Items */}
+            <div className="p-3 space-y-1.5">
+              {cart.length === 0 ? <div className="text-center text-[#8A7D71] text-sm py-6">Tap items to add</div>
+                : cartLines.map((item) => (
+                  <div key={item.id} className="bg-[#F6F3EC] rounded-xl px-2.5 py-2">
+                    <div className="flex items-center gap-2">
+                      <p className="flex-1 text-sm font-medium text-[#2C241B] truncate">{item.name}</p>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => adjustQty(item.id, -1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-red-50 text-[#2C241B]" data-testid={`dec-${item.id}`}><Minus size={10} /></button>
+                        <span className="w-5 text-center text-sm font-bold text-[#2C241B]">{item.qty}</span>
+                        <button onClick={() => adjustQty(item.id, 1)} className="w-6 h-6 rounded-full bg-white border border-amber-900/20 flex items-center justify-center hover:bg-green-50 text-[#2C241B]" data-testid={`inc-${item.id}`}><Plus size={10} /></button>
+                      </div>
+                      <span className="text-sm font-bold text-[#8B5A2B] w-14 text-right">₹{item.subtotal.toFixed(0)}</span>
                     </div>
-                    <span className="text-sm font-bold text-[#8B5A2B] w-14 text-right">₹{item.subtotal.toFixed(0)}</span>
                   </div>
-                </div>
-              ))}
-          </div>
+                ))}
+            </div>
 
-          {/* Bill summary + payment + actions — scrollable middle, fixed footer */}
-          <div className="border-t border-amber-900/10 flex flex-col min-h-0">
-            <div className="p-3 space-y-2 overflow-y-auto" style={{ maxHeight: "40vh" }}>
+            {/* Bill summary + payment */}
+            <div className="px-3 pb-3 pt-2 space-y-2 border-t border-amber-900/10">
               {/* Overall discount */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -322,25 +323,25 @@ export default function Billing() {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Sticky footer: total + submit buttons */}
-            <div className="p-3 border-t border-amber-900/10 bg-white space-y-2 shrink-0">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-[#2C241B] text-sm">Total</span>
-                <span className="text-xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
-                  className="bg-[#8B5A2B] text-white rounded-xl py-2.5 font-bold text-xs hover:bg-[#704822] active:scale-[0.98] transition-all disabled:opacity-50"
-                  data-testid="submit-bill-btn">
-                  {submitting ? "..." : "Submit Bill"}
-                </button>
-                <button onClick={() => handleSubmit("bill")} disabled={submitting || cart.length === 0}
-                  className="flex items-center justify-center gap-1.5 bg-[#3E5C46] text-white rounded-xl py-2.5 text-xs font-bold hover:bg-[#2F4735] active:scale-[0.98] transition-all disabled:opacity-50"
-                  data-testid="submit-print-bill-btn">
-                  <Printer size={13} /> Submit + Print
-                </button>
-              </div>
+          {/* Sticky footer: total + submit buttons */}
+          <div className="p-3 border-t border-amber-900/10 bg-white space-y-2 shrink-0">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-[#2C241B] text-sm">Total</span>
+              <span className="text-xl font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>₹{total}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleSubmit(null)} disabled={submitting || cart.length === 0}
+                className="bg-[#8B5A2B] text-white rounded-xl py-2.5 font-bold text-xs hover:bg-[#704822] active:scale-[0.98] transition-all disabled:opacity-50"
+                data-testid="submit-bill-btn">
+                {submitting ? "..." : "Submit Bill"}
+              </button>
+              <button onClick={() => handleSubmit("bill")} disabled={submitting || cart.length === 0}
+                className="flex items-center justify-center gap-1.5 bg-[#3E5C46] text-white rounded-xl py-2.5 text-xs font-bold hover:bg-[#2F4735] active:scale-[0.98] transition-all disabled:opacity-50"
+                data-testid="submit-print-bill-btn">
+                <Printer size={13} /> Submit + Print
+              </button>
             </div>
           </div>
         </div>
