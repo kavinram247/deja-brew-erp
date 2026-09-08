@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import api from "../../utils/api";
 import { toast } from "sonner";
-import { Coffee, Download, FileText } from "lucide-react";
+import { Coffee, Download, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 import DateRangeToolbar from "../../components/DateRangeToolbar";
 import { shiftYMD } from "../../utils/date";
@@ -42,6 +42,7 @@ export default function Overview() {
   const [discountStats, setDiscountStats] = useState(null);
   const [taxStats, setTaxStats] = useState(null);
   const [stationSales, setStationSales] = useState(null);
+  const [showUnassigned, setShowUnassigned] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -242,21 +243,46 @@ export default function Overview() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                {stationSales.stations.map((st) => (
-                  <div key={st.station} className="rounded-2xl border border-amber-900/10 p-4"
-                    style={{ background: `${STATION_COLOR[st.station]}0D` }} data-testid={`station-card-${st.station}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATION_COLOR[st.station] }} />
-                      <p className="text-[10px] uppercase tracking-widest font-medium text-[#8A7D71]">{st.label}</p>
+                {stationSales.stations.map((st) => {
+                  const isUnassigned = st.station === "unassigned";
+                  const expanded = isUnassigned && showUnassigned;
+                  return (
+                    <div key={st.station}
+                      className={`rounded-2xl border border-amber-900/10 p-4 ${isUnassigned ? "cursor-pointer" : ""}`}
+                      style={{ background: `${STATION_COLOR[st.station]}0D` }} data-testid={`station-card-${st.station}`}
+                      onClick={isUnassigned ? () => setShowUnassigned((v) => !v) : undefined}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATION_COLOR[st.station] }} />
+                        <p className="text-[10px] uppercase tracking-widest font-medium text-[#8A7D71] flex-1">{st.label}</p>
+                        {isUnassigned && (expanded ? <ChevronUp size={14} className="text-[#8A7D71]" /> : <ChevronDown size={14} className="text-[#8A7D71]" />)}
+                      </div>
+                      <p className="text-2xl font-bold mt-1" style={{ color: STATION_COLOR[st.station], fontFamily: "Outfit, sans-serif" }}>
+                        ₹{(st.revenue || 0).toLocaleString("en-IN")}
+                      </p>
+                      <p className="text-xs text-[#8A7D71] mt-1">
+                        {(st.share || 0).toFixed(1)}% of sales · {st.qty} items · {st.bills} bills
+                      </p>
+                      {isUnassigned && (
+                        <p className="text-[10px] text-[#8A7D71] mt-1.5 italic">
+                          {expanded ? "Click to collapse" : "Not matched to Barista/Kitchen — click to see which items"}
+                        </p>
+                      )}
+                      {expanded && (
+                        <div className="mt-3 pt-3 border-t border-amber-900/10 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                          {st.top_items.map((it) => (
+                            <div key={it.name} className="flex justify-between text-xs gap-2">
+                              <span className="text-[#3D342B] truncate">{it.name}</span>
+                              <span className="text-[#8A7D71] shrink-0">{it.qty} · ₹{(it.revenue || 0).toLocaleString("en-IN")}</span>
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-[#8A7D71] pt-1">
+                            Fix in <span className="font-medium">Menu → set a Station</span> for each item above.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-2xl font-bold mt-1" style={{ color: STATION_COLOR[st.station], fontFamily: "Outfit, sans-serif" }}>
-                      ₹{(st.revenue || 0).toLocaleString("en-IN")}
-                    </p>
-                    <p className="text-xs text-[#8A7D71] mt-1">
-                      {(st.share || 0).toFixed(1)}% of sales · {st.qty} items · {st.bills} bills
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex h-3 rounded-full overflow-hidden mb-5">

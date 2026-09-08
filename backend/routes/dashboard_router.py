@@ -608,7 +608,14 @@ def _compute_station_sales(start: str, end: str, bills: list, menu_items: list) 
             "qty": a["qty"],
             "bills": a["bills"],
             "share": round(a["revenue"] / total_rev * 100, 2) if total_rev else 0.0,
-            "top_items": sorted(items[k].values(), key=lambda x: x["revenue"], reverse=True)[:5],
+            # Barista/Kitchen: top 5 sellers is plenty. Unassigned gets the FULL
+            # list, uncapped — it exists so the owner can find and fix every item
+            # that's slipping through, not just the biggest ones.
+            "top_items": (
+                sorted(items[k].values(), key=lambda x: x["revenue"], reverse=True)
+                if k == UNASSIGNED else
+                sorted(items[k].values(), key=lambda x: x["revenue"], reverse=True)[:5]
+            ),
         })
 
     # Continuous daily series so charts don't gap
