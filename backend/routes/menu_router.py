@@ -4,6 +4,7 @@ from typing import Optional
 from bson import ObjectId
 from database import get_db
 from auth_utils import get_current_user
+from stations import normalize_station
 
 router = APIRouter()
 
@@ -15,6 +16,7 @@ class MenuItemCreate(BaseModel):
     description: Optional[str] = None
     active: bool = True
     tax_exempt: bool = False
+    station: Optional[str] = None  # "barista" | "kitchen" — defaults from category
 
 
 def serialize(doc):
@@ -39,7 +41,9 @@ async def create_item(input: MenuItemCreate, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") != "owner":
         raise HTTPException(403, "Owner access required")
-    result = await db.menu_items.insert_one(input.model_dump())
+    doc = input.model_dump()
+    doc["station"] = normalize_station(doc.get("station"), doc.get("category"))
+    result = await db.menu_items.insert_one(doc)
     item = await db.menu_items.find_one({"_id": result.inserted_id})
     return serialize(item)
 
@@ -50,7 +54,9 @@ async def update_item(item_id: str, input: MenuItemCreate, request: Request):
     user = await get_current_user(request, db)
     if user.get("role") != "owner":
         raise HTTPException(403, "Owner access required")
-    await db.menu_items.update_one({"_id": ObjectId(item_id)}, {"$set": input.model_dump()})
+    doc = input.model_dump()
+    doc["station"] = normalize_station(doc.get("station"), doc.get("category"))
+    await db.menu_items.update_one({"_id": ObjectId(item_id)}, {"$set": doc})
     item = await db.menu_items.find_one({"_id": ObjectId(item_id)})
     return serialize(item)
 

@@ -4,6 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from database import get_db
 from auth_utils import get_current_user
+from stations import BARISTA, KITCHEN, UNASSIGNED, STATION_LABELS, resolve_station
 
 router = APIRouter()
 
@@ -511,3 +512,113 @@ async def get_daily_summary(request: Request, date_str: Optional[str] = None):
     menu_items = await db.menu_items.find({}, {"category": 1, "name": 1}).to_list(None)
 
     return _compute_daily_summary(day, bills, menu_items, datetime.now(timezone.utc).isoformat())
+
+
+def _compute_station_sales(start: str, end: str, bills: list, menu_items: list) -> dict:
+    """Split item sales across barista / kitchen. Pure — no DB access, unit-testable.
+
+    Station is resolved at report time (bill items don't store it), so historical
+    bills are included and reflect the item's current station assignment.
+    """
+    by_id = {str(m["_id"]): resolve_station(m) for m in menu_items}
+    by_name = {}
+    for m in menu_items:
+        nm = (m.get("name") or "").strip().lower()
+        if nm:
+            by_name.setdefault(nm, resolve_station(m))
+
+    keys = (BARISTA, KITCHEN, UNASSIGNED)
+    agg = {k: {"revenue": 0.0, "qty": 0, "bills": 0} for k in keys}
+    items = {k: {} for k in keys}
+    daily = {}
+
+    for b in bills:
+        day = b.get("date")
+        seen = set()
+        for it in b.get("items", []):
+            name = (it.get("name") or "").strip() or "Unnamed"
+            st = by_id.get(it.get("menu_item_id")) or by_name.get(name.lower()) or UNASSIGNED
+            if st not in agg:
+                st = UNASSIGNED
+            qty = it.get("quantity", 0) or 0
+            amount = round(it.get("subtotal", 0) or 0, 2)
+
+            agg[st]["revenue"] = round(agg[st]["revenue"] + amount, 2)
+            agg[st]["qty"] += qty
+            seen.add(st)
+
+            row = items[st].setdefault(name, {"name": name, "qty": 0, "revenue": 0.0})
+            row["qty"] += qty
+            row["revenue"] = round(row["revenue"] + amount, 2)
+
+            if day:
+                d = daily.setdefault(day, {k: 0.0 for k in keys})
+                d[st] = round(d[st] + amount, 2)
+
+        for st in seen:
+            agg[st]["bills"] += 1
+
+    total_rev = round(sum(agg[k]["revenue"] for k in keys), 2)
+    total_qty = sum(agg[k]["qty"] for k in keys)
+
+    stations = []
+    for k in keys:
+        a = agg[k]
+        # Only surface the catch-all bucket when something actually landed in it
+        if k == UNASSIGNED and a["revenue"] == 0 and a["qty"] == 0:
+            continue
+        stations.append({
+            "station": k,
+            "label": STATION_LABELS[k],
+            "revenue": a["revenue"],
+            "qty": a["qty"],
+            "bills": a["bills"],
+            "share": round(a["revenue"] / total_rev * 100, 2) if total_rev else 0.0,
+            "top_items": sorted(items[k].values(), key=lambda x: x["revenue"], reverse=True)[:5],
+        })
+
+    # Continuous daily series so charts don't gap
+    rows = []
+    try:
+        cur = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = datetime.strptime(end, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        cur = end_dt = None
+    while cur is not None and cur <= end_dt:
+        d = cur.strftime("%Y-%m-%d")
+        v = daily.get(d, {})
+        rows.append({
+            "date": d,
+            "barista": round(v.get(BARISTA, 0.0), 2),
+            "kitchen": round(v.get(KITCHEN, 0.0), 2),
+            "unassigned": round(v.get(UNASSIGNED, 0.0), 2),
+        })
+        cur += timedelta(days=1)
+
+    return {
+        "from": start,
+        "to": end,
+        "stations": stations,
+        "totals": {"revenue": total_rev, "qty": total_qty},
+        "daily": rows,
+    }
+
+
+@router.get("/station-sales")
+async def get_station_sales(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    """Barista vs kitchen sales split for a date range (POS bills only)."""
+    db = get_db()
+    await get_current_user(request, db)
+
+    end = to_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    start = from_date or datetime.now(timezone.utc).strftime("%Y-%m-01")
+
+    bills, menu_items = await asyncio.gather(
+        db.bills.find({"date": {"$gte": start, "$lte": end}, "is_voided": {"$ne": True}}).to_list(None),
+        db.menu_items.find({}, {"category": 1, "name": 1, "station": 1}).to_list(None),
+    )
+    return _compute_station_sales(start, end, bills, menu_items)

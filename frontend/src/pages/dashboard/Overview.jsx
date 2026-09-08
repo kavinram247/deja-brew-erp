@@ -8,6 +8,8 @@ import { shiftYMD } from "../../utils/date";
 import { downloadCsv } from "../../utils/csv";
 import { downloadPdf } from "../../utils/pdf";
 
+const STATION_COLOR = { barista: "#8B5A2B", kitchen: "#3E5C46", unassigned: "#C9B99A" };
+
 function DeltaBadge({ current, prev }) {
   if (!prev || prev === 0) return null;
   const pct = ((current - prev) / prev) * 100;
@@ -39,6 +41,7 @@ export default function Overview() {
   const [compRows, setCompRows] = useState([]);
   const [discountStats, setDiscountStats] = useState(null);
   const [taxStats, setTaxStats] = useState(null);
+  const [stationSales, setStationSales] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,15 +52,17 @@ export default function Overview() {
         const compareEnd = shiftYMD(range.from, -1);
         const compareStart = shiftYMD(compareEnd, -(spanDays - 1));
 
-        const [analyticsRes, discountRes, taxRes] = await Promise.all([
+        const [analyticsRes, discountRes, taxRes, stationRes] = await Promise.all([
           api.get(`/dashboard/analytics?from_date=${range.from}&to_date=${range.to}&compare_from=${compareStart}&compare_to=${compareEnd}`),
           api.get(`/dashboard/discount-stats?from_date=${range.from}&to_date=${range.to}`),
           api.get(`/dashboard/tax-summary?from_date=${range.from}&to_date=${range.to}`),
+          api.get(`/dashboard/station-sales?from_date=${range.from}&to_date=${range.to}`),
         ]);
         setRows(analyticsRes.data.current || []);
         setCompRows(analyticsRes.data.comparison || []);
         setDiscountStats(discountRes.data);
         setTaxStats(taxRes.data);
+        setStationSales(stationRes.data);
       } catch { toast.error("Failed to load analytics"); }
       finally { setLoading(false); }
     })();
@@ -227,6 +232,56 @@ export default function Overview() {
               </ResponsiveContainer>
             )}
           </div>
+
+          {/* Barista vs Kitchen */}
+          {stationSales && stationSales.totals?.revenue > 0 && (
+            <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-6" data-testid="station-split">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Barista vs Kitchen</h2>
+                <span className="text-xs text-[#8A7D71]">item sales · POS bills only</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                {stationSales.stations.map((st) => (
+                  <div key={st.station} className="rounded-2xl border border-amber-900/10 p-4"
+                    style={{ background: `${STATION_COLOR[st.station]}0D` }} data-testid={`station-card-${st.station}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATION_COLOR[st.station] }} />
+                      <p className="text-[10px] uppercase tracking-widest font-medium text-[#8A7D71]">{st.label}</p>
+                    </div>
+                    <p className="text-2xl font-bold mt-1" style={{ color: STATION_COLOR[st.station], fontFamily: "Outfit, sans-serif" }}>
+                      ₹{(st.revenue || 0).toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-xs text-[#8A7D71] mt-1">
+                      {(st.share || 0).toFixed(1)}% of sales · {st.qty} items · {st.bills} bills
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex h-3 rounded-full overflow-hidden mb-5">
+                {stationSales.stations.map((st) => (
+                  <div key={st.station} style={{ width: `${st.share}%`, background: STATION_COLOR[st.station] }}
+                    title={`${st.label} · ${st.share}%`} />
+                ))}
+              </div>
+
+              {stationSales.daily.length > 1 && (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={stationSales.daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD1" />
+                    <XAxis dataKey="date" tick={{ fill: "#8A7D71", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#8A7D71", fontSize: 11 }} />
+                    <Tooltip contentStyle={{ background: "#FFF", border: "1px solid #E8DFD1", borderRadius: 12 }}
+                      formatter={(v) => `₹${Number(v).toLocaleString("en-IN")}`} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="barista" stackId="s" fill="#8B5A2B" name="Barista" />
+                    <Bar dataKey="kitchen" stackId="s" fill="#3E5C46" name="Kitchen" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          )}
 
           {/* Discount summary */}
           {discountStats && (

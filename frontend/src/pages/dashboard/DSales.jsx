@@ -15,6 +15,7 @@ function median(arr) {
 }
 
 const BADGE_COLOR = { STAR: "#D48B3D", WORKHORSE: "#3E5C46", DEAD: "#C9B99A" };
+const STATION_COLOR = { barista: "#8B5A2B", kitchen: "#3E5C46", unassigned: "#C9B99A" };
 
 export default function DSales() {
   const today = new Date().toISOString().split("T")[0];
@@ -22,6 +23,7 @@ export default function DSales() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState("revenue");
+  const [stationSales, setStationSales] = useState(null);
 
   useEffect(() => {
     if (!range.from) {
@@ -31,8 +33,12 @@ export default function DSales() {
     (async () => {
       setLoading(true);
       try {
-        const { data } = await api.get(`/dashboard/top-items?from_date=${range.from}&to_date=${range.to}`);
-        setItems(data);
+        const [itemsRes, stationRes] = await Promise.all([
+          api.get(`/dashboard/top-items?from_date=${range.from}&to_date=${range.to}`),
+          api.get(`/dashboard/station-sales?from_date=${range.from}&to_date=${range.to}`),
+        ]);
+        setItems(itemsRes.data);
+        setStationSales(stationRes.data);
       } catch { toast.error("Failed"); }
       finally { setLoading(false); }
     })();
@@ -143,6 +149,47 @@ export default function DSales() {
               {topAvg && <p className="text-xs text-[#8A7D71] mt-1">₹{topAvg.avg_price.toFixed(2)} avg</p>}
             </div>
           </div>
+
+          {stationSales && stationSales.totals?.revenue > 0 && (
+            <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-6" data-testid="sales-station-split">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Barista vs Kitchen</h2>
+                <span className="text-xs text-[#8A7D71]">item sales · POS bills only</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {stationSales.stations.map((st) => (
+                  <div key={st.station} className="rounded-2xl border border-amber-900/10 overflow-hidden"
+                    data-testid={`sales-station-${st.station}`}>
+                    <div className="p-4" style={{ background: `${STATION_COLOR[st.station]}0D` }}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ background: STATION_COLOR[st.station] }} />
+                        <p className="text-[10px] uppercase tracking-widest font-medium text-[#8A7D71]">{st.label}</p>
+                      </div>
+                      <p className="text-2xl font-bold mt-1" style={{ color: STATION_COLOR[st.station], fontFamily: "Outfit, sans-serif" }}>
+                        ₹{(st.revenue || 0).toLocaleString("en-IN")}
+                      </p>
+                      <p className="text-xs text-[#8A7D71] mt-1">
+                        {(st.share || 0).toFixed(1)}% of sales · {st.qty} items · {st.bills} bills
+                      </p>
+                    </div>
+                    {st.top_items?.length > 0 && (
+                      <div className="p-3 border-t border-amber-900/10">
+                        <p className="text-[10px] uppercase tracking-widest text-[#8A7D71] font-medium mb-2">Top items</p>
+                        <div className="space-y-1.5">
+                          {st.top_items.map((it) => (
+                            <div key={it.name} className="flex justify-between text-xs gap-2">
+                              <span className="text-[#3D342B] truncate">{it.name}</span>
+                              <span className="text-[#8A7D71] shrink-0">{it.qty} · ₹{(it.revenue || 0).toLocaleString("en-IN")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {sorted.length === 0 ? (
             <div className="bg-white rounded-2xl border border-amber-900/10 p-12 shadow-[0_4px_24px_rgba(44,36,27,0.04)] text-center">

@@ -23,7 +23,18 @@ const CATS = [
   "Add-ons",
 ];
 
-const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true, tax_exempt: false };
+// Mirrors backend/stations.py — default station per category. Owners can override per item.
+const STATION_BY_CATEGORY = {
+  "Hot Beverages": "barista", "Cold Beverages": "barista", "House Speciality Coffees": "barista",
+  "Tea Treasures": "barista", "Mojitos": "barista", "Milkshakes": "barista", "Frappes": "barista",
+  "Signatures": "barista", "Desserts": "barista", "Add-ons": "barista",
+  "Soup": "kitchen", "Salad": "kitchen", "Small Plates": "kitchen",
+  "Burger and Sandwiches": "kitchen", "Gourmet Wraps": "kitchen",
+  "All Day Breakfast": "kitchen", "Mains": "kitchen",
+};
+const stationForCategory = (c) => STATION_BY_CATEGORY[c] || "kitchen";
+
+const EMPTY_ITEM = { name: "", category: "Soup", price: 0, description: "", active: true, tax_exempt: false, station: stationForCategory("Soup") };
 
 export default function MenuPage() {
   const [items, setItems] = useState([]);
@@ -64,6 +75,7 @@ export default function MenuPage() {
       name: item.name, category: item.category, price: item.price,
       description: item.description || "", active: item.active,
       tax_exempt: item.tax_exempt || false,
+      station: item.station || stationForCategory(item.category),
     });
     setEditItem(item); setShowItemForm(true);
   };
@@ -208,7 +220,15 @@ export default function MenuPage() {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#2C241B] truncate">{item.name}</p>
-                      <p className="text-[10px] text-[#8A7D71] uppercase tracking-wider mt-0.5">{item.category}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <p className="text-[10px] text-[#8A7D71] uppercase tracking-wider">{item.category}</p>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                          (item.station || stationForCategory(item.category)) === "barista"
+                            ? "bg-[#8B5A2B]/10 text-[#8B5A2B]" : "bg-[#3E5C46]/10 text-[#3E5C46]"
+                        }`}>
+                          {(item.station || stationForCategory(item.category)) === "barista" ? "Barista" : "Kitchen"}
+                        </span>
+                      </div>
                     </div>
                     <div className="text-right">
                       <span className="text-lg font-bold text-[#8B5A2B]" style={{ fontFamily: "Outfit, sans-serif" }}>
@@ -267,7 +287,8 @@ export default function MenuPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Category</label>
-                  <select value={itemForm.category} onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
+                  <select value={itemForm.category}
+                    onChange={(e) => setItemForm({ ...itemForm, category: e.target.value, station: stationForCategory(e.target.value) })}
                     className="w-full rounded-xl border border-amber-900/20 px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#8B5A2B]">
                     {CATS.map((c) => <option key={c}>{c}</option>)}
                   </select>
@@ -279,6 +300,21 @@ export default function MenuPage() {
                     className="w-full rounded-xl border border-amber-900/20 px-3 py-2 text-sm focus:outline-none focus:border-[#8B5A2B]"
                     data-testid="menu-price-input" />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Station</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[["barista", "Barista (drinks)"], ["kitchen", "Kitchen (food)"]].map(([val, label]) => (
+                    <button type="button" key={val} onClick={() => setItemForm({ ...itemForm, station: val })}
+                      className={`py-2 rounded-xl text-xs font-semibold transition-colors ${
+                        itemForm.station === val ? "bg-[#8B5A2B] text-white" : "bg-[#F6F3EC] text-[#5C4F43] hover:bg-[#8B5A2B]/10"
+                      }`}
+                      data-testid={`menu-station-${val}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-[#8A7D71] mt-1">Used for the Barista vs Kitchen sales split</p>
               </div>
               <div>
                 <label className="text-xs font-medium text-[#5C4F43] mb-1 block">Description</label>

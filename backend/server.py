@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from database import init_db, close_db
 from auth_utils import hash_password, verify_password
+from stations import station_for_category
 from routes.auth_router import router as auth_router
 from routes.walkins_router import router as walkins_router
 from routes.menu_router import router as menu_router
@@ -110,6 +111,17 @@ async def startup_event():
              "$unset": {"quantity": ""}},
         )
     await db.inventory.update_many({"section": {"$exists": False}}, {"$set": {"section": "Other"}})
+
+    # Backfill menu item station (barista/kitchen) for the sales split.
+    # Owners can override any item afterwards from the Menu page.
+    unstationed = await db.menu_items.find({"station": {"$exists": False}}).to_list(5000)
+    for m in unstationed:
+        await db.menu_items.update_one(
+            {"_id": m["_id"]},
+            {"$set": {"station": station_for_category(m.get("category"))}},
+        )
+    if unstationed:
+        logger.info(f"Backfilled station on {len(unstationed)} menu item(s)")
 
     # Seed owner
     admin_email = os.environ.get("ADMIN_EMAIL", "owner@dejabrew.com")
