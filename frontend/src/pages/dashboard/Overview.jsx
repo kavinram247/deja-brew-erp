@@ -238,7 +238,7 @@ export default function Overview() {
             <div className="bg-white rounded-2xl border border-amber-900/10 p-6 shadow-[0_4px_24px_rgba(44,36,27,0.04)] mb-6" data-testid="station-split">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                 <h2 className="font-semibold text-[#2C241B]" style={{ fontFamily: "Outfit, sans-serif" }}>Barista vs Kitchen</h2>
-                <span className="text-xs text-[#8A7D71]">item sales · POS bills only</span>
+                <span className="text-xs text-[#8A7D71]">incl. GST · adds up to Revenue · POS bills only</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">

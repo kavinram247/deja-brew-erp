@@ -534,30 +534,64 @@ def _compute_station_sales(start: str, end: str, bills: list, menu_items: list) 
 
     for b in bills:
         day = b.get("date")
+        bill_items = b.get("items", []) or []
+
+        # Item subtotals are pre-tax. To make Barista + Kitchen reconcile exactly
+        # to the bill's actual (tax-inclusive) total, spread each bill's overall
+        # discount, GST and service charge across its TAXABLE items by their
+        # subtotal share — tax-exempt items (e.g. Water Bottle) get no uplift,
+        # since they were never taxed or discounted to begin with.
+        taxable_subtotal = sum((it.get("subtotal", 0) or 0) for it in bill_items if not it.get("tax_exempt"))
+        overall_discount = min(b.get("overall_discount", 0) or 0, taxable_subtotal) if taxable_subtotal > 0 else 0.0
+        tax_and_service = (b.get("cgst", 0) or 0) + (b.get("sgst", 0) or 0) + (b.get("service_charge", 0) or 0)
+        bill_total = b.get("total", 0) or 0
+
+        bucket_raw = {}  # station -> unrounded tax-inclusive amount, this bill only
         seen = set()
-        for it in b.get("items", []):
+        for it in bill_items:
             name = (it.get("name") or "").strip() or "Unnamed"
             st = by_id.get(it.get("menu_item_id")) or by_name.get(name.lower()) or UNASSIGNED
             if st not in agg:
                 st = UNASSIGNED
             qty = it.get("quantity", 0) or 0
-            amount = round(it.get("subtotal", 0) or 0, 2)
+            sub = it.get("subtotal", 0) or 0
 
-            agg[st]["revenue"] = round(agg[st]["revenue"] + amount, 2)
+            if it.get("tax_exempt"):
+                alloc = sub
+            else:
+                share = (sub / taxable_subtotal) if taxable_subtotal > 0 else 0.0
+                alloc = sub - overall_discount * share + tax_and_service * share
+
             agg[st]["qty"] += qty
+            bucket_raw[st] = bucket_raw.get(st, 0.0) + alloc
             seen.add(st)
 
             row = items[st].setdefault(name, {"name": name, "qty": 0, "revenue": 0.0})
             row["qty"] += qty
-            row["revenue"] = round(row["revenue"] + amount, 2)
+            row["revenue"] = round(row["revenue"] + alloc, 2)
 
+        if bucket_raw:
+            # Assign the bill's round-off (a few paise) to its largest bucket so
+            # this bill's own allocations sum EXACTLY to its total — no drift
+            # once summed across many bills.
+            leftover = bill_total - sum(bucket_raw.values())
+            top_bucket = max(bucket_raw, key=bucket_raw.get)
+            bucket_raw[top_bucket] += leftover
+        elif bill_total:
+            bucket_raw[UNASSIGNED] = bill_total
+            seen.add(UNASSIGNED)
+
+        for st, val in bucket_raw.items():
+            agg[st]["revenue"] += val
             if day:
                 d = daily.setdefault(day, {k: 0.0 for k in keys})
-                d[st] = round(d[st] + amount, 2)
+                d[st] = d.get(st, 0.0) + val
 
         for st in seen:
             agg[st]["bills"] += 1
 
+    for k in keys:
+        agg[k]["revenue"] = round(agg[k]["revenue"], 2)
     total_rev = round(sum(agg[k]["revenue"] for k in keys), 2)
     total_qty = sum(agg[k]["qty"] for k in keys)
 
